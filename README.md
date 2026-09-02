@@ -4,6 +4,9 @@
 merge, compress, retire and reuse modules without catastrophic interference *and* without
 uncontrolled capacity growth.
 
+> **Source of truth: [issue #1](https://github.com/in-c0/modular-consolidation/issues/1).**
+> If a document here disagrees with it, that issue wins.
+
 > Status: **research/design track.** No confirmatory experiment has been run and none may
 > be frozen until the design lessons from `in-c0/plasticity-routing` are available. The
 > only empirical content here is a development simulator whose headline finding is
