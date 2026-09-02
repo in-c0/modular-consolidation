@@ -1,4 +1,4 @@
-.PHONY: test toy calibrate calibrate-v1 ceiling bundle
+.PHONY: test toy calibrate calibrate-v1 ceiling ceiling-phase bundle
 
 test:
 	PYTHONPATH=src pytest -q
@@ -14,6 +14,9 @@ toy:
 
 ceiling:
 	python scripts/run_ceiling.py --seeds 0 1 2 3 4 5 6 7
+
+ceiling-phase:
+	python scripts/run_ceiling_phase.py
 
 bundle:
 	git archive --format=zip --output=../modular-consolidation-repo.zip HEAD
