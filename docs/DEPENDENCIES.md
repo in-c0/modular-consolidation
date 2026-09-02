@@ -35,9 +35,13 @@ not assumed here.
 | The six-factor confound (routing/capacity/compute/task-ID/spawn/consolidation) is unresolved in prior work | `audit-supported`, absence claims re-checkable via `docs/LITERATURE-AUDIT-2026-09-02.md` §7 |
 | Learned routing beats random routing at matched capacity | `development-pilot` |
 | A bank with a bad router is worse than no bank | `development-pilot` |
-| Consolidation beats a capacity-matched fixed bank | `falsified on CAMS-v0 toy`, untested elsewhere |
-| The merge criterion selects correct pairs | `development-pilot` |
-| Merge-decision quality and merge cost are weakly coupled | `development-pilot` |
+| Consolidation beats a capacity-matched fixed bank (unbounded regime) | `falsified`, and explained: EXP-001 shows it cannot hold |
+| Retention vs capacity is monotone under competent routing | `development-pilot`, replicated across 3 mechanisms |
+| Consolidation in the unbounded regime is a compression claim, not a forgetting claim | `development-pilot` (follows from the above) |
+| Under a binding ceiling, merging beats eviction | `development-pilot`, +0.204 retention, CI excludes zero |
+| Under a binding ceiling, merging beats refusing to spawn | `unresolved`, retention null concealing a significant plasticity/forgetting trade |
+| The merge criterion selects correct pairs | `development-pilot` (opportunistic merges only; degrades to ~chance when merges are forced) |
+| Merge-decision quality and merge cost are weakly coupled | `development-pilot`, replicated in two regimes |
 | Any statement about real models | `no evidence` |
 
 ## No CI

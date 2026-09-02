@@ -138,6 +138,19 @@ number. It is at least three separable quantities.
 
 ---
 
+## 4a. Update after EXP-001 (2026-09-02)
+
+The question in §4 was posed for the unbounded-capacity regime. EXP-001 established that in
+that regime the retention-versus-capacity curve is monotone non-decreasing under competent
+routing, so **consolidation cannot improve retention at matched capacity there at all** —
+the question as posed was close to analytically settled, in the negative.
+
+The live question is therefore the **binding-ceiling** one: under a hard ceiling below the
+number of distinct skills, does pooling (merge) beat destroying (evict) or refusing (deny),
+at identical capacity? EXP-002 finds a large significant gap between merge and evict, and a
+null between merge and deny. No prior work found in this audit runs `deny` as a baseline or
+separates merging from eviction under a fixed ceiling.
+
 ## 5. Novelty boundary — what this track may and may not claim
 
 **May not claim as novel:**
@@ -211,17 +224,48 @@ Verified during this audit (`[A]`):
 - *Learn it or Leave it: Module Composition and Pruning for Continual Learning* (MoCL-P), arXiv:2406.18708.
 - *Dimensionality Controls When Modularity Helps in Continual Learning*, arXiv:2606.17889.
 
-Surfaced but not yet fully verified (`[S]`) — do not cite in a paper before upgrading:
+### Upgraded to `[A]` on 2026-09-02 (abstract/landing page retrieved and read)
 
-- *MINGLE: Mixture of Null-Space Gated Low-Rank Experts for Test-Time Continual Model Merging*, arXiv:2505.11883.
-- *Dynamic Mixture of Experts Against Severe Distribution Shifts*, arXiv:2511.18987.
+- **MINGLE: Mixture of Null-Space Gated Low-Rank Experts for Test-Time Continual Model
+  Merging.** Qiu, Xu, He, Meng, Xu, Wu, Li. **NeurIPS 2025**, arXiv:2505.11883.
+  Null-space constrained gating over low-rank experts. Reports accuracy gains (7–9%);
+  **no parameter-count or capacity-growth reporting in the abstract.**
+- **On Understanding of the Dynamics of Model Capacity in Continual Learning.**
+  Chakraborty & Raghavan, arXiv:2508.08052 (Aug 2025). Defines **CLEMC**, an effective
+  model capacity characterising the stability–plasticity balance point, and argues capacity
+  in CL is non-stationary. *This is the closest prior art to our capacity framing and must
+  be distinguished explicitly:* CLEMC is a property of a network's representational state;
+  our `ppap`/frontier metrics are budget-accounting quantities over a lifetime. They are
+  complementary, not competing, and the paper must say so.
+- **When Model Merging Breaks Routing: Training-Free Calibration for MoE (HARC).**
+  Huang, Shi, Quan, Wang, Zhang, Wang (2026), arXiv:2606.03391. Identifies **routing
+  breakdown**: merging perturbs parameters enough that softmax/top-k routing dispatches
+  tokens to the wrong experts. *Direct prior art for our `mechanism_loss` term* — it
+  establishes that a real, non-trivial part of merge damage is routing damage rather than
+  weight damage. Our decomposition must cite it and should consider splitting mechanism
+  loss further into weight and routing components.
+- **Scaling Continual Learning to 300+ Tasks with Bi-Level Routing MoE (CaRE).**
+  Lou, Fu, Yu. **ICML 2026**, arXiv:2602.03473. Scales to 100–300+ tasks with two-stage
+  routing. **Does not report parameter growth against task count** — supports the audit's
+  §3 F2 gap at the largest task counts currently published.
+- **FLAME: Adaptive Mixture-of-Experts for Continual Multimodal Multi-Task Learning.**
+  Han, Chaudhari, Ranade, Chellappa, Saria (2026), arXiv:2605.09355. Keeps a **fixed-capacity**
+  expert pool and adapts by compressing expert knowledge into low-rank memory while expanding
+  only routers. The closest published occupant of the "compress instead of expand" cell.
+- **Latent-LoRA: Compact Latent-Space Adapters with Gradient-Free Routing.**
+  Azghan, Gudur, Pedrielli, Turaga, Ghasemzadeh (2026), arXiv:2607.23837. One adapter per
+  task; routing by a **GMM fitted on frozen embeddings with no gradient training**. Claims
+  near-zero forgetting — which, per this track's EXP-001 structural finding, is what strict
+  parameter isolation gives you for free, so the interesting question is its capacity curve.
+- **Unifying Detection and Adaptation in Task-Free Continual Learning (FiUni).**
+  Han, Zhang, Zhu, Guo (2026), arXiv:2608.27070. Fisher-subspace matching for batch-level
+  task detection; adaptively **reuses, expands, or creates** a subspace. One of the few
+  methods with all three allocation outcomes in one policy.
+
+Still `[S]` — do not cite in a paper before upgrading:
+
+- *Dynamic Mixture of Experts Against Severe Distribution Shifts*, arXiv:2511.18987 (Kim, Nov 2025).
 - *CP-MoE: Consistency-Preserving Mixture-of-Experts for Continual Learning*, arXiv:2605.20247.
-- *FLAME: Adaptive Mixture-of-Experts for Continual Multimodal Multi-Task Learning*, arXiv:2605.09355.
-- *Latent-LoRA: Compact Latent-Space Adapters with Gradient-Free Routing for Continual Learning*, arXiv:2607.23837.
-- *Unifying Detection and Adaptation in Task-Free Continual Learning*, arXiv:2608.27070.
-- *Scaling Continual Learning to 300+ Tasks with Bi-Level Routing Mixture-of-Experts*, arXiv:2602.03473.
-- *When Model Merging Breaks Routing: Training-Free Calibration for MoE*, arXiv:2606.03391.
-- *On Understanding of the Dynamics of Model Capacity in Continual Learning*, arXiv:2508.08052.
 - *Model Merging in LLMs, MLLMs, and Beyond* (ACM Computing Surveys, 2026) — survey, use for coverage checking.
 - *LargeMonitor: Monitoring Online Task-Free Continual Learning via Large Pretrained Models*, arXiv:2606.09430.
 

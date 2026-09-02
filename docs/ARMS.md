@@ -26,6 +26,12 @@ arm they are controlling for.
 | F4 | task identity | task-free / boundaries given / IDs given |
 | F5 | allocation | fixed / spawn-by-criterion / spawn-random-timing |
 | F6 | consolidation | none / merge-by-criterion / merge-random-pairs / merge+retire+reinstate |
+| F7 | slot policy under a binding ceiling | deny / evict-LRU / evict-random / merge-best / merge-random |
+| F8 | compression | none / structured width reduction to a capacity target |
+
+`F1` gained a `soft` level (density-gated mixture over all live modules) after EXP-001, and
+`F7`/`F8` were added after Amendment B. `F7` is the factor that matters most: it is the only
+place where capacity is held equal *by construction* rather than by matching.
 
 ## Primary arms
 
@@ -58,6 +64,25 @@ count. Their configuration is a deterministic function of the target run's manif
 | `C-OID(A3)` | value of task inference | `A3` with oracle task IDs replacing the learned router (upper bound on routing) |
 | `C-BOUND(A4)` | value of boundary knowledge | `A4` with true segment boundaries supplied to the spawn trigger |
 
+## Binding-ceiling arms (added 2026-09-02, Amendment B)
+
+Every arm holds the same ceiling and therefore the same live-module count, `param_total` and
+`storage_total` at every step. They differ only in how a slot is freed when a spawn is
+wanted and the bank is full. This is the only part of the lattice where capacity needs no
+matching at all, because it cannot differ.
+
+| ID | On full | Isolates |
+| --- | --- | --- |
+| `B-DENY` | refuse to spawn | the baseline the literature almost never reports |
+| `B-EVICT-LRU` | delete least-recently-used, then spawn | destroying knowledge to make room |
+| `B-EVICT-RAND` | delete a random module, then spawn | the eviction *criterion*, vs the eviction rate |
+| `B-MERGE` | pool the most similar pair, then spawn | pooling knowledge to make room |
+| `B-MERGE-RAND` | pool a random pair, then spawn | the merge *criterion*, vs merging at all |
+
+`C-SHRINK(A)` was also added: structured width reduction of an unconsolidated bank down to
+a target arm's realised `param_total`. It reduces capacity **without combining knowledge**,
+so if it matches a merging arm then "consolidation" collapses into the capacity factor.
+
 ## What each comparison licenses
 
 | Comparison | Licensed conclusion if significant |
@@ -74,6 +99,12 @@ count. Their configuration is a deterministic function of the target run's manif
 | `A6` vs `C-TERM(A6)`, `C-PEAK(A6)` | the whole lifecycle beats a fixed bank of the same size |
 | `A6` vs `C-FLOP(A3←A6)` | the lifecycle beats simply spending the same compute on a fixed bank |
 
+| `B-MERGE` vs `B-EVICT-LRU` | **pooling** beats destroying at identical capacity |
+| `B-MERGE` vs `B-DENY` | consolidation is worth admitting new modules at all |
+| `B-MERGE` vs `B-MERGE-RAND` | the merge criterion contributes beyond merging |
+| `B-EVICT-LRU` vs `B-EVICT-RAND` | the eviction criterion contributes beyond evicting |
+| `A5` vs `C-SHRINK(A5)` | merging beats plain compression to the same size |
+
 ## The result that would falsify the track
 
 If `C-TERM(A6)` matches or beats `A6` on the retention–plasticity frontier at equal `param_total`
@@ -81,4 +112,11 @@ and equal `total_algorithmic_flops`, then **dynamic allocation and consolidation
 that choosing the right fixed size would not have contributed.** That is a publishable negative
 result and must be reported as the headline, not buried.
 
-It is the single most likely outcome and the protocol is built so that it is cheap to establish.
+**This already happened.** EXP-000 found exactly that, and EXP-001 then explained why it was
+inevitable in the unbounded regime: the retention-versus-capacity curve is monotone, so there
+is nothing for consolidation to fix. The falsification is recorded, and the track moved to the
+binding-ceiling regime where the comparison is not degenerate.
+
+In the binding-ceiling regime the falsifying result is different: if `B-MERGE` matches
+`B-EVICT-LRU`, then pooling knowledge is worth nothing over destroying it, and consolidation
+has no defensible claim at all. EXP-002 did not find that.

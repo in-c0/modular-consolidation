@@ -24,6 +24,11 @@ class ArmConfig:
     soft_temperature: float = 1.0     # only used by routing == "soft"
     cap: int | None = None            # max live modules; None = unbounded
     consolidation: str = "none"       # none | merge | random_merge | full
+    # What to do when a spawn is wanted but the capacity ceiling is full. All options
+    # end the step at the same live-module count, parameter count and storage, so any
+    # difference between them is attributable to the slot decision alone.
+    on_full: str = "deny"             # deny | evict_lru | evict_random
+                                      # | merge_best | merge_random
     merge_operator: str = "operator"  # operator | exact
     novelty_z: float = -3.0
     merge_agreement: float = 0.90
@@ -62,7 +67,8 @@ class ArmResult:
     traffic_share: dict[int, float]
     spawn_chunks: list[int]
     merge_chunks: list[int]
-    flags: list[str]
+    evictions: list[dict] = field(default_factory=list)
+    flags: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -76,6 +82,7 @@ class ArmResult:
             "k_peak": self.k_peak,
             "traffic_share": self.traffic_share,
             "spawn_chunks": self.spawn_chunks,
+            "evictions": self.evictions,
             "merge_chunks": self.merge_chunks,
             "flags": self.flags,
         }
@@ -133,6 +140,7 @@ class ArmRunner:
         self.traffic: dict[int, int] = {}
         self.merges: list[dict] = []
         self.pending_recovery: list[dict] = []
+        self.evictions: list[dict] = []
         self.module_skills: dict[int, dict[int, int]] = {}
         self.spawn_chunks: list[int] = []
         self.merge_chunks: list[int] = []
@@ -187,7 +195,8 @@ class ArmRunner:
         return self.oracle_map[skill]
 
     # -- allocation --------------------------------------------------------
-    def _select_or_allocate(self, phi: np.ndarray, skill: int) -> Module:
+    def _select_or_allocate(self, phi: np.ndarray, skill: int,
+                            seen_hint: int = 0) -> Module:
         cfg = self.cfg
         if cfg.routing == "none":
             return self.bank.live[sorted(self.bank.live)[0]]
@@ -214,6 +223,12 @@ class ArmRunner:
                 best_mod = self.bank.live[ids[best]]
                 want_new = best_mod.novelty_z(float(mean_scores[best])) < cfg.novelty_z
 
+        if want_new and at_cap and cfg.on_full != "deny":
+            freed = self._free_a_slot(seen_hint)
+            if freed:
+                self.spawn_chunks.append(self.chunk_t)
+                return self.bank.spawn(self.chunk_t, reason=f"after_{cfg.on_full}")
+
         if want_new and not at_cap:
             if cfg.consolidation == "full" and self.bank.cold:
                 cold_ids, cold_scores = self.bank.score_cold(phi)
@@ -232,6 +247,65 @@ class ArmRunner:
         return self.bank.live[ids[int(np.argmax(mean_scores))]]
 
     # -- consolidation -----------------------------------------------------
+    def _free_a_slot(self, seen: int) -> bool:
+        """Make room for one new module under a binding ceiling.
+
+        ``evict_*`` destroys a module's knowledge; ``merge_*`` pools it. Both free exactly
+        one slot, so the comparison isolates what happens to the knowledge, not how much
+        capacity is available.
+        """
+        cfg = self.cfg
+        live = self.bank.live_ids
+        if len(live) < 2:
+            return False
+
+        if cfg.on_full == "evict_lru":
+            victim = min(live, key=lambda m: self.last_used.get(m, self.bank.live[m].born_at))
+            self.bank.prune(self.chunk_t, victim, reason="lru")
+            self.evictions.append({"chunk": self.chunk_t, "mid": victim, "rule": "lru"})
+            return True
+        if cfg.on_full == "evict_random":
+            victim = int(self.rng.choice(live))
+            self.bank.prune(self.chunk_t, victim, reason="random")
+            self.evictions.append({"chunk": self.chunk_t, "mid": victim, "rule": "random"})
+            return True
+
+        if cfg.on_full == "merge_random":
+            pair = tuple(int(x) for x in self.rng.choice(live, size=2, replace=False))
+        else:  # merge_best
+            best = (-1.0, None)
+            for ai in range(len(live)):
+                for bi in range(ai + 1, len(live)):
+                    agree = self._functional_agreement(self.bank.live[live[ai]],
+                                                       self.bank.live[live[bi]])
+                    if agree > best[0]:
+                        best = (agree, (live[ai], live[bi]))
+            if best[1] is None:
+                return False
+            pair = best[1]
+
+        i, j = int(pair[0]), int(pair[1])
+        record = self._measure_merge(i, j, seen)
+        record["trigger"] = "ceiling"
+        merged = self.bank.merge(self.chunk_t, i, j, operator=cfg.merge_operator,
+                                 reason=f"on_full:{cfg.on_full}")
+        combined = dict(self.module_skills.get(i, {}))
+        for k, v in self.module_skills.get(j, {}).items():
+            combined[k] = combined.get(k, 0) + v
+        self.module_skills[merged.mid] = combined
+        self.traffic[merged.mid] = self.traffic.get(i, 0) + self.traffic.get(j, 0)
+        self.last_used[merged.mid] = self.chunk_t
+        self.merge_chunks.append(self.chunk_t)
+        record["acc_after"] = self._probe_accuracy(self.bank.live, seen)
+        record["recovery_trace"] = []
+        self.merges.append(record)
+        self.pending_recovery.append({
+            "merge_idx": len(self.merges) - 1,
+            "seen_at_merge": seen,
+            "due": [self.chunk_t + k for k in cfg.recovery_probe_offsets],
+        })
+        return True
+
     def _functional_agreement(self, a: Module, b: Module, n: int = 128) -> float:
         """Do these two modules compute the same function on each other's input regions?"""
         phis = []
@@ -414,7 +488,7 @@ class ArmRunner:
                 y = Y[start:start + stream.cfg.chunk]
                 if phi.shape[0] == 0:
                     continue
-                mod = self._select_or_allocate(phi, seg.skill)
+                mod = self._select_or_allocate(phi, seg.skill, seen_hint=t)
                 for _ in range(self.cfg.extra_passes):
                     mod.observe(phi, y)
                     self.ledger.spend_train(stream.cfg.d_feat, stream.cfg.n_class,
@@ -493,6 +567,7 @@ class ArmRunner:
             k_peak=self.ledger.live_modules_peak,
             traffic_share=traffic_share,
             spawn_chunks=self.spawn_chunks,
+            evictions=self.evictions,
             merge_chunks=self.merge_chunks,
             flags=self.flags,
         )

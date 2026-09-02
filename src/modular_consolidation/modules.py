@@ -252,6 +252,7 @@ class ModuleBank:
         self.ledger = ledger
         self.live: dict[int, Module] = {}
         self.cold: dict[int, Module] = {}
+        self.pruned: dict[int, dict] = {}
         self._next_mid = 0
         self.events: list[dict] = []
 
@@ -310,6 +311,19 @@ class ModuleBank:
         self.events.append({"t": t, "op": "compress", "mid": mid, "width": m.width,
                             "freed": freed, "reason": reason})
         return freed
+
+    def prune(self, t: int, mid: int, reason: str = "evicted") -> None:
+        """Delete a module permanently. Unlike ``retire`` it leaves no cold-storage cost,
+        because there is nothing left to store. This is the destructive way to free a slot
+        under a binding ceiling; ``merge`` is the non-destructive way.
+        """
+        m = self.live.pop(mid)
+        self.ledger.remove_params(m.deployed_params)
+        self.ledger.set_live_modules(len(self.live))
+        self._sync_state_bytes()
+        self.pruned[mid] = {"born_at": m.born_at, "pruned_at": t,
+                            "usage": m.usage, "reason": reason}
+        self.events.append({"t": t, "op": "prune", "mid": mid, "reason": reason})
 
     def retire(self, t: int, mid: int, reason: str = "idle") -> None:
         """Remove from routing and from the active-parameter budget.

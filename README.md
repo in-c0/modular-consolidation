@@ -22,18 +22,21 @@ literature audit says so explicitly and names the prior work
 What is unresolved is attribution. A modular continual learner that beats a baseline may be
 winning because of routing, capacity, compute, task-identity leakage, allocation timing, or
 consolidation. Prior work ablates these one at a time inside papers advocating a specific
-method; no matched-budget decomposition separates all six. So the narrow question is:
+method; no matched-budget decomposition separates all six. So the question is:
 
 > **Does consolidation buy anything that capacity cannot?**
->
-> In a task-free stream, at matched stored parameters, active parameters, cold-storage
-> bytes and total algorithmic compute (routing decisions included), does a policy that
-> spawns, merges, retires and reinstates modules beat a fixed bank of the same terminal
-> size with the same learned routing?
 
-The sharp version: **is transient over-allocation followed by consolidation better than
-being right-sized from the start?** That is the only thing consolidation can uniquely buy,
-because you do not know the right size in advance.
+The first version of that question was posed in the unbounded-capacity regime. **That
+version turns out to be close to analytically settled, in the negative** — see the finding
+below. The live question is the constrained one:
+
+> Under a **hard capacity ceiling below the number of distinct skills**, and at identical
+> live-module count, parameters, storage and compute, does a policy that frees a slot by
+> **pooling** modules (merge) retain more than one that frees it by **destroying** a module
+> (evict) or by **refusing** to admit a new one (deny)?
+
+Capacity is equal by construction there, so any difference is attributable to the slot
+decision alone. It is also the realistic deployment case: fixed memory, unbounded stream.
 
 ## Why the obvious ladder is not the experiment
 
@@ -57,27 +60,52 @@ anything. Every arm is scored on `param_total`, `param_active`, `param_peak`,
 reported as a retention–plasticity frontier against capacity and compute, not as a table of
 accuracies. See [`docs/METRICS.md`](docs/METRICS.md).
 
-## Development pilot: the falsification already fires
+## What the simulator has established
 
-CAMS-v0 is a synthetic stream with a **known ground-truth skill count `K*`**, so
-over-allocation, under-allocation and merge correctness are measurable directly rather than
-inferred from accuracy. On it, over 5 development seeds:
+CAMS is a synthetic stream with a **known ground-truth skill count `K*`**, so
+over-allocation, under-allocation and merge correctness are measured rather than inferred.
+All results below are **development-simulator** results on a closed-form ridge learner, not
+evidence about real models.
 
-- learned routing beats random routing at identical capacity (0.809 vs 0.630 retention) —
-  and a bank with a bad router is worse than no bank at all (0.630 vs 0.681);
-- a fixed bank of the full lifecycle's own final size beat the full lifecycle by 7.8 points
-  at identical capacity (0.738 vs 0.660);
-- the merge criterion picked ground-truth-correct pairs with precision 1.00 versus 0.67 for
-  random pairing — and it barely mattered, costing ~0.002 accuracy either way.
+### 1. Over-allocation is free in accuracy terms — so consolidation cannot fix forgetting
 
-**On this toy, consolidation bought nothing that capacity could not.** Full write-up,
-including the benchmark-validity failure found on the first configuration and the two
-accounting bugs found by the tests, is in
-[`experiments/EXP-000-TOY-RESULT.md`](experiments/EXP-000-TOY-RESULT.md).
+The retention-versus-capacity curve is **monotone non-decreasing** under any competent
+routing. A module that is never selected cannot damage a prediction, so spare modules cost
+parameters, compute and storage but not accuracy. Established across three independent
+mechanisms — interference between skills, data scarcity per module, and soft density-gated
+routing — none of which could produce an interior optimum
+([`EXP-001`](experiments/EXP-001-INTERFERENCE-RESULT.md)).
 
-This does not falsify the hypothesis for real models — the toy learner merges almost
-losslessly and its retention tracks capacity almost linearly, both artefacts. It does raise
-the burden of proof, and the confirmatory design is built against this null.
+**Consequence: at matched capacity in the unbounded regime, consolidation has nothing to
+fix.** Its only possible benefit is moving left along the efficiency frontier — a
+*compression* claim, not a *forgetting* claim. This explains
+[`EXP-000`](experiments/EXP-000-TOY-RESULT.md), where a fixed bank of the full lifecycle's
+own final size beat the lifecycle by 7.8 points at identical capacity.
+
+### 2. Under a binding ceiling, merging and eviction are not the same operation
+
+At an identical ceiling of 3 modules with `K* = 6` — same live-module count, same 576
+parameters, same 33 408 bytes of storage for every arm — over 8 paired seeds
+([`EXP-002`](experiments/EXP-002-CEILING-RESULT.md)):
+
+| freeing a slot by | retention | plasticity | forgetting |
+| --- | --- | --- | --- |
+| refusing to spawn (`B-DENY`) | **0.762** | 0.775 | **0.032** |
+| pooling two modules (`B-MERGE`) | 0.745 | 0.798 | 0.071 |
+| deleting a module (`B-EVICT-LRU`) | 0.541 | **0.854** | 0.324 |
+
+- **merge − evict: +0.204 retention**, 95% CI [+0.125, +0.296]. Pooling recovers essentially
+  all of eviction's damage. This is the defensible form of the consolidation claim.
+- **merge − deny: −0.017 retention**, CI spans zero — but that null conceals two significant
+  effects in opposite directions: plasticity **+0.023** and forgetting **+0.039**, both CIs
+  excluding zero. Consolidation converts stability into plasticity at roughly par.
+- **merge − random-merge: +0.009**, CI spans zero. The criterion picks better pairs
+  (precision 0.50 vs 0.36) and each merge is less damaging (0.027 vs 0.042), and none of it
+  survives to the aggregate.
+
+Two things follow for the field. `deny` is a missing baseline, and it is the strongest arm
+on retention here. And "prune redundant experts" and "merge redundant experts" are routinely
+used interchangeably while differing by 0.204 retention at identical capacity.
 
 ## Repository layout
 
@@ -88,10 +116,28 @@ docs/METRICS.md                       metric definitions, including capacity and
 docs/TERMINOLOGY.md                   fixed vocabulary shared with sibling tracks
 docs/BENCHMARK-POLICY.md              how difficulty may be calibrated without cheating
 docs/DEPENDENCIES.md                  contamination rules and evidence status
-experiments/EXP-000-TOY-RESULT.md     development pilot, including its negative result
+docs/OWNER-DECISIONS.md               decisions that are the owner's, with consequences
+experiments/EXP-000-TOY-RESULT.md     first pilot: capacity explains everything
+experiments/EXP-001-INTERFERENCE-RESULT.md  negative instrument result, and why it matters
+experiments/EXP-002-CEILING-RESULT.md the binding-ceiling regime; the one positive result
+experiments/METHODS-MATRIX.md         which published methods get re-analysed, and how
 experiments/EXP-100-PREREG-DRAFT.md   candidate confirmatory protocol -- NOT FROZEN
+papers/METHODS-PAPER-SKELETON.md      primary paper outline; no results may be written yet
 src/modular_consolidation/            generic module lifecycle infrastructure
 ```
+
+## Primary paper
+
+Per owner decision D3, the primary near-term output is a **methods/evaluation paper about
+attribution**, which proposes no new policy and re-analyses representative published modular
+CL methods under the control lattice. See
+[`papers/METHODS-PAPER-SKELETON.md`](papers/METHODS-PAPER-SKELETON.md) and
+[`experiments/METHODS-MATRIX.md`](experiments/METHODS-MATRIX.md). The architecture paper is
+a second, conditional paper.
+
+Its thesis is falsifiable in the useful direction: if published gains **do** survive
+capacity- and compute-matched controls, the field's evaluation practice is adequate and the
+paper becomes a validation of it rather than a critique.
 
 ## Local gates
 
@@ -107,9 +153,13 @@ make calibrate
 make toy
 ```
 
-`make calibrate` chooses stream difficulty by a method-independent criterion on development
-seeds. `make toy` runs the arm lattice and every derived control, and prints the frontier
-table plus the merge-loss decomposition.
+```bash
+make ceiling
+```
+
+`make calibrate` and `make calibrate-v1` choose stream difficulty by method-independent
+criteria on development seeds. `make toy` runs the arm lattice and every derived control.
+`make ceiling` runs the binding-ceiling regime with paired bootstrap CIs.
 
 ## Novelty boundary
 

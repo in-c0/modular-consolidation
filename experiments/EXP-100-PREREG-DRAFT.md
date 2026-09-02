@@ -6,23 +6,35 @@
 > that input. Running EXP-100 before the gate lifts produces an engineering pilot at best
 > and an uninterpretable result at worst.
 
-Version: draft-0.1 (2026-09-02). Any change after freezing requires a numbered amendment
+Version: draft-0.2 (2026-09-02). Amended after owner decisions D1–D3 and after
+EXP-001/EXP-002; see `docs/OWNER-DECISIONS.md` and
+`docs/BENCHMARK-POLICY.md` Amendments A and B. Any change after freezing requires a numbered amendment
 in this file with a date and the reason, following the State Promotion convention.
 
 ---
 
-## 1. Question
+## 1. Question — **reformulated in draft-0.2**
 
-> In a task-free continual stream, when total stored parameters, active parameters per
-> input, cold storage bytes, replay bytes and total algorithmic compute (including
-> routing decision compute) are all matched, does a policy that **spawns, merges, retires
-> and reinstates** modules achieve a better retention–plasticity frontier than a fixed
-> bank of the same terminal size with the same learned routing?
+The draft-0.1 question was posed in the unbounded-capacity regime. EXP-001 showed that
+regime cannot answer it: with competent routing the retention-versus-capacity curve is
+monotone non-decreasing, so consolidation cannot improve retention at matched capacity and
+the hypothesis was close to analytically false. That framing is retained in the record
+(`experiments/EXP-001-INTERFERENCE-RESULT.md`) and replaced here.
 
-Equivalently, and more bluntly: **does consolidation buy anything that capacity cannot?**
+The question is now:
 
-The development pilot (EXP-000) answered *no* on a toy stream. EXP-100 asks whether that
-survives a real model, a real adapter, and a stream with genuine interference.
+> Under a **hard capacity ceiling below the number of distinct skills**, and at identical
+> live-module count, parameters, cold-storage bytes and total algorithmic compute, does a
+> policy that frees a slot by **pooling** modules (merge) retain more than one that frees it
+> by **destroying** a module (evict) or by **refusing** to admit a new one (deny)?
+
+Capacity is equal by construction in that regime, so any difference is attributable to the
+slot decision alone. This is also the realistic deployment case: fixed memory, unbounded
+task stream.
+
+EXP-002 answers it on a toy: merge ≫ evict (+0.204 retention, CI excludes zero), merge ≈ deny
+on retention but trading significant plasticity for significant forgetting. EXP-100 asks
+whether that survives a real model and a real adapter.
 
 ## 2. Why this is the narrow question
 
@@ -34,10 +46,17 @@ its controls, not an architecture.
 
 ## 3. Hypotheses
 
-**H1 (primary, consolidation).** At matched `param_total`, `param_active`,
-`storage_total` and `total_algorithmic_flops`, arm `A6` achieves higher retention than
-`C-TERM(A6)` with a paired-bootstrap 95% CI excluding zero, while retaining at least 95%
-of `C-TERM(A6)`'s plasticity.
+**H1 (primary, consolidation under a binding ceiling).** At an identical live-module
+ceiling, `param_total`, `storage_total` and `total_algorithmic_flops`, `B-MERGE` achieves
+higher retention than `B-EVICT-LRU`, paired-bootstrap 95% CI excluding zero.
+
+**H1b (the harder half).** `B-MERGE` achieves a better retention–plasticity frontier
+position than `B-DENY`. Retention alone is not the test: EXP-002 found a retention null
+concealing a significant plasticity gain and a significant forgetting cost, so H1b is
+evaluated on both axes and reported as a frontier claim.
+
+**H1-retired.** The draft-0.1 H1 ("`A6` beats `C-TERM(A6)` on retention at matched
+capacity") is withdrawn as malformed, not merely unsupported. See EXP-001.
 
 **H2 (allocation).** `A4` achieves higher retention than `C-RSPAWN(A4)` (spawn-count- and
 rate-matched, random timing), establishing that the spawn *criterion* contributes beyond
@@ -147,6 +166,10 @@ Additional invalidation specific to this track:
 The following must be resolved from that track's design lessons before this protocol is
 frozen:
 
+0. **Substrate (settled by owner decision D1, not by this track).** Small language model
+   with LoRA-style modular adapters. Vision may serve as a cheap diagnostic but must not
+   become the main scientific claim. Model family, adapter rank and routing implementation
+   remain unfrozen.
 1. **Routing substrate.** Whether the router is density-based, learned-gated, or
    reconstruction-based materially changes what `decision_flops` means and whether O(N)
    routing is admissible at the scale tested.
