@@ -100,7 +100,8 @@ descriptions, and `deny` is a missing baseline in memory-pressure evaluations.
 
 Per D5 and `experiments/EXP-003-CEILING-PHASE-PREREG.md`, sweep absolute `K*` and
 `ceiling/K*` separately while holding expected exposures per skill and recurrence statistics
-fixed. Report the complete grid.
+fixed. Report the complete grid. The preregistration predates the committed runner
+`scripts/run_ceiling_phase.py`.
 
 The primary question is not whether one cell favours merge. It is whether B-MERGE creates a
 **reproducible region** that expands the retention–plasticity Pareto frontier relative to
@@ -112,21 +113,30 @@ architecture narrative is inferred.
 
 ## 6. Real-model evidence design — **[REQUIRES UNRUN EXPERIMENTS]**
 
-Per `experiments/METHODS-MATRIX.md`, use two evidence layers.
+Per `experiments/METHODS-MATRIX.md`, use two evidence layers. Transplant fidelity and
+admission are defined in `experiments/STANDARDIZED-TRANSPLANTS.md` before implementation.
 
 ### 6.1 Standardized mechanism panel — Long Sequence / MTL15
 
-Use Long Sequence / MTL15 as the common small-LM + LoRA/adapters benchmark, with the two
-established fixed task orders, task-agnostic inference, and task identity only for scoring
-and `C-OID`. This panel supports cross-method mechanism comparison under one accounting
-protocol.
+Use Long Sequence / MTL15 as the common small-LM + adapter benchmark, with the two
+established task-agnostic Long Sequence orders, task-agnostic inference, and task identity
+only for scoring and `C-OID`. This panel supports cross-method mechanism comparison under one
+accounting protocol.
 
 A mechanism transplanted here is labelled a **standardized implementation**, not a
-reproduction of the source paper. Initial candidates are M1/M2/M3/M4/M6/M7. MADE-IT and
-FLAME remain outside the standardized panel unless their LoRA transplants are independently
-validated.
+reproduction of the source paper. After source-level fidelity review, the clean initial core
+is narrower than the original matrix:
 
-Model family, LoRA rank and the shared routing substrate remain gated on
+- M1 fixed-bank routing reference — candidate once the shared substrate is fixed;
+- M2 `BEXP-LoRA` — explicit boundary-expansion reference, not a DEN reproduction;
+- M7 Latent-LoRA/GMM routing — candidate, with adapter-geometry and router effects separated.
+
+M3 MoCL-P and M4 reconstruction novelty routing are **blocked** until their exact transplant
+semantics are closed. M5 MADE-IT, M6 NORACL and M8 FLAME are **native-fidelity only for now**:
+forcing their CLIP-ViT merge, neuron-neurogenesis or multimodal-MoE operations into ordinary
+LoRA would change the causal mechanism rather than standardize it.
+
+Model family, adapter family/rank and the shared routing substrate remain gated on
 `in-c0/plasticity-routing`.
 
 ### 6.2 Native-fidelity re-analysis
@@ -155,12 +165,15 @@ When §6 runs, report:
 
 - Simulator results use a closed-form toy learner where merge mechanism loss is unusually
   small; gradient-trained adapters may change the mechanism-loss and routing-loss terms.
-- The EXP-003 pressure phase diagram is predeclared but unrun until committed executable
-  machinery is available.
+- The EXP-003 pressure phase diagram is predeclared and has a committed runner, but no
+  EXP-003 result exists until that runner is actually executed and its complete payload is
+  committed.
 - Reimplementation fidelity is the dominant threat to native-fidelity attribution claims.
+- Standardization itself can change a method's causal mechanism; P3 semantic transplants are
+  therefore excluded rather than treated as approximate reproductions.
 - Long Sequence / MTL15 gives one common LM classification substrate, not universal coverage
   of multimodal or generative continual learning.
-- Exact model family, LoRA rank and shared routing implementation remain gated on
+- Exact model family, adapter rank and shared routing implementation remain gated on
   `plasticity-routing`.
 
 ## 9. What would falsify or narrow the paper's thesis
@@ -188,3 +201,5 @@ a narrative.
 4. Related work states that the component operations are not novel in the paper's own voice.
 5. Standardized transplants are never described as reproductions of source-paper results.
 6. One favourable pressure cell never licenses a regime-level or architecture claim.
+7. A source method cannot enter Layer A under its original name if standardization changes
+   the causal operation rather than only the substrate.
