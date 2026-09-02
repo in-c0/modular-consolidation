@@ -107,6 +107,10 @@ The paper states the pruning decision in terms of the newly learned module's mat
 into the final pruning statistic must be verified from an authoritative implementation or
 source before code is frozen. Do not invent mean/max aggregation.
 
+The public Bosch repository currently exposes the preceding MoCL implementation and says the
+MoCL-P code would be released later; it is not sufficient provenance for inventing the
+missing pruning aggregation.
+
 The source experiment is task-incremental and assumes task labels at training and testing.
 D6 requires task-agnostic inference, so the task/head-selection adaptation must be fixed with
 `plasticity-routing`; the source-like task-ID path is retained only as `C-OID`.
@@ -118,13 +122,13 @@ Primary controls once executable: no-prune MoCL counterpart, `C-TERM`, `C-SHRINK
 
 ## M4 — Zero-Leakage reconstruction novelty routing
 
-**Class: P2, provisionally admissible.**
+**Class: P2, provisionally admissible, but paper/code reconciliation is required.**
 
 Source: Kermiche, *Modular Continual Learning via Zero-Leakage Reconstruction Routing and
 Autonomous Task Discovery* (arXiv:2604.14375).
 
 The portable causal mechanism is its **autonomous novelty/return decision**, not its whole
-Teacher/Student pipeline. Preserve:
+Teacher/Student pipeline. The paper-level mechanism to preserve is:
 
 1. maintain a per-module reconstruction router over a frozen representation;
 2. before adapting to a batch, compute familiarity as the minimum reconstruction error over
@@ -139,16 +143,43 @@ Teacher/Student pipeline. Preserve:
    the sustained performance criterion; otherwise it must not permanently pollute the bank;
 7. use reconstruction routing for returning manifolds rather than spawning duplicates.
 
+### M4 source discrepancy — do not silently choose a side
+
+The public repository linked by the paper does **not** currently implement the paper's
+written dynamic threshold rule consistently:
+
+- `unified_cl_framework.py` uses `BN_K = 12` and a fixed `NOVELTY_TAU = 0.15`;
+- `autonomous_task_discovery.py` uses a 16-dimensional bottleneck and a fixed
+  `novelty_threshold = 0.5`;
+- neither of those scripts implements `mu_cal + max(3*sigma_cal, m)` as written in the paper;
+- the unified script also commits/finalizes its expert directly after its fixed training loop
+  rather than exposing the paper's explicit sustained commitment-gate constants.
+
+This is an **implementation-fidelity conflict**, not a tuning opportunity. The standardized
+panel and Layer-B reproduction must not pick 0.15, 0.5, bottleneck 12, bottleneck 16, or a new
+margin merely because one produces cleaner results.
+
 ### M4 blockers before execution
 
-The source's TB-AE architecture, minimum-margin `m`, commitment-window `K`, stability
-criterion and soft inference rule must be fixed from source defaults or an independently
-predeclared implementation. The standardized expert may be LoRA, but that substitution is
-explicitly labelled; the novelty rule itself must not be replaced by a convenient learned
-gate.
+Before M4 can run, create a dated reconciliation note that fixes one of these defensible
+paths *without looking at outcome scores*:
 
-Primary controls: `C-TERM`, matched random routing, and `C-RSPAWN` derived from realised
-spawn count/timing rules as defined by the lattice.
+A. **paper-contract implementation:** implement the written dynamic calibration/commitment
+rule and label the public scripts as partial simulations rather than the executable spec; or
+B. **code-fidelity implementation:** select one explicitly named public script as the native
+simulation target and label every deviation from the paper, while keeping the paper-contract
+version as a separate mechanism implementation.
+
+The TB-AE architecture, minimum-margin `m`, commitment-window `K`, stability criterion and
+soft inference rule also remain unresolved where the paper does not supply executable
+constants. The standardized expert may be LoRA, but that substitution is explicitly labelled;
+the novelty rule itself must not be replaced by a convenient learned gate.
+
+Until that reconciliation is committed, M4 is **not executable** in either evidence layer
+for source-attribution claims.
+
+Primary controls after reconciliation: `C-TERM`, matched random routing, and `C-RSPAWN`
+derived from realised spawn count/timing rules as defined by the lattice.
 
 ## M5 — MADE-IT
 
@@ -225,7 +256,7 @@ compression rule is defined.
 | M1 | blocked only on shared substrate | constructed reference |
 | M2 `BEXP-LoRA` | blocked only on shared substrate/router | deliberately constructed P2 reference |
 | M3 MoCL-P transplant | **blocked** | pruning-stat aggregation + task-agnostic adaptation unresolved |
-| M4 reconstruction novelty transplant | **blocked** | router/threshold implementation constants unresolved |
+| M4 reconstruction novelty transplant | **blocked** | paper/code threshold + bottleneck + commitment semantics conflict |
 | M5 MADE-IT | **excluded for now** | P3 semantic transplant |
 | M6 NORACL | **excluded for now** | neuron neurogenesis != LoRA expert spawn |
 | M7 Latent-LoRA/router | blocked on shared adapter choice | native benchmark/router already compatible |
@@ -239,7 +270,9 @@ matrix.
 ## Source anchors
 
 - MoCL-P: https://arxiv.org/abs/2406.18708
+- prior MoCL public code: https://github.com/boschresearch/MoCL-NAACL-2024
 - Zero-Leakage Reconstruction Routing: https://arxiv.org/abs/2604.14375
+- linked public simulations: https://github.com/norikermiche-123/Modular_Continual_Learning
 - NORACL: https://arxiv.org/abs/2604.27031
 - Latent-LoRA: https://arxiv.org/abs/2607.23837
 
