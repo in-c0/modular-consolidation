@@ -53,7 +53,7 @@ Current standardized-panel admission state after source verification:
 | M1 | fixed adapter bank + learned task-free router | **candidate** | constructed reference; shared model/rank/router still gated |
 | M2 | `BEXP-LoRA`: one fresh adapter at each training task boundary | **candidate** | explicit P2 expansion reference, not DEN reproduction |
 | M3 | MoCL-P composition + pruning transplanted to common PEFT | **blocked** | exact pruning-stat aggregation and task-agnostic adaptation unresolved |
-| M4 | reconstruction-based novelty allocation | **blocked** | TB-AE/margin/commitment/soft-routing constants must be frozen from source |
+| M4 | reconstruction-based novelty allocation | **blocked** | paper/code disagree on threshold, bottleneck and commitment implementation; reconcile before execution |
 | M5 | manifold-aware merge rule | **excluded for now** | native CLIP-ViT geometry; LoRA transplant is semantic until validated |
 | M6 | NORACL | **excluded for now** | native operation is layer-local neuron neurogenesis, not LoRA-expert spawn |
 | M7 | Latent-LoRA/GMM routing | **candidate** | native Long Sequence/task-agnostic router is compatible; shared adapter family still gated |
@@ -82,7 +82,7 @@ Latent-LoRA also appear here for source-paper attribution.
 | M1 | — | — | reference point |
 | M2 | vs fixed-capacity baselines of different size | growth vs routing/capacity | `C-TERM`; explicit task-free vs `C-OID` split |
 | M3 | parameter-efficiency gain | pruning vs never allocating / structured shrink | no-prune counterpart, `C-TERM`, `C-SHRINK`, `C-OID` |
-| M4 | vs regularisation/rehearsal baselines; O(N) growth acknowledged | capacity and novelty/router quality | `C-TERM`, matched random routing, `C-RSPAWN` |
+| M4 | vs regularisation/rehearsal baselines; O(N) growth acknowledged | capacity and novelty/router quality | paper-contract vs code-fidelity reconciliation first; then `C-TERM`, matched random routing, `C-RSPAWN` |
 | M5 | ACC/BWT after final merge | merge vs fewer experts; merge vs destructive removal | `C-RMERGE`, `B-EVICT`, `B-DENY` |
 | M6 | near-largest-static performance with fewer parameters | native saturation signal/growth vs capacity and event timing | native matched-capacity control + `C-RSPAWN`-style timing control where valid |
 | M7 | near-zero forgetting with one adapter per task | isolation/adapter geometry vs router quality | matched random router, `C-OID`, terminal-capacity control |
@@ -127,6 +127,9 @@ spawn. Do those distinctions survive in gradient-trained modular methods?
 - A standardized transplant is never described as reproducing the original paper.
 - A semantic P3 transplant cannot enter Layer A under the source method's name merely to
   make the panel look complete.
+- If paper prose and public source code disagree on an executable mechanism, the conflict is
+  recorded and resolved by a dated pre-run contract; outcome scores may not choose the
+  interpretation.
 - If controls show published gains survive, that is reported as a positive result for the
   field rather than reframed as failure of this project.
 
@@ -138,8 +141,8 @@ The benchmark is no longer the conceptual blocker. Before any Layer-A run:
    substrate;
 2. M3 must resolve the authoritative aggregation used for its pruning statistic and the
    task-agnostic head/routing adaptation;
-3. M4 must freeze its reconstruction-router and commitment constants from source defaults or
-   a separately predeclared implementation.
+3. M4 must reconcile the paper's dynamic novelty/commitment contract with the inconsistent
+   fixed-threshold public simulation scripts before freezing any implementation.
 
 M1/M2/M7 can be implemented once blocker 1 lifts. Layer B preparation can continue in
 parallel where a source implementation/native benchmark is available, but no cross-substrate
