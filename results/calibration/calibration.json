@@ -1,0 +1,100 @@
+{
+  "criterion": {
+    "min_headroom": 0.15,
+    "ceiling": 0.95
+  },
+  "rows": [
+    {
+      "single_retention": 0.906470588235294,
+      "oracle_retention": 0.9526470588235294,
+      "headroom": 0.04617647058823526,
+      "region_scale": 2.2,
+      "at_ceiling": false,
+      "admissible": false,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    },
+    {
+      "single_retention": 0.8795098039215686,
+      "oracle_retention": 0.9338235294117648,
+      "headroom": 0.054313725490196085,
+      "region_scale": 1.6,
+      "at_ceiling": false,
+      "admissible": false,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    },
+    {
+      "single_retention": 0.8423529411764706,
+      "oracle_retention": 0.9160784313725491,
+      "headroom": 0.0737254901960785,
+      "region_scale": 1.2,
+      "at_ceiling": false,
+      "admissible": false,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    },
+    {
+      "single_retention": 0.7858823529411764,
+      "oracle_retention": 0.8917647058823531,
+      "headroom": 0.10588235294117661,
+      "region_scale": 0.9,
+      "at_ceiling": false,
+      "admissible": false,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    },
+    {
+      "single_retention": 0.7213725490196078,
+      "oracle_retention": 0.8749019607843138,
+      "headroom": 0.15352941176470591,
+      "region_scale": 0.7,
+      "at_ceiling": false,
+      "admissible": true,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    },
+    {
+      "single_retention": 0.6258823529411764,
+      "oracle_retention": 0.8539215686274509,
+      "headroom": 0.2280392156862745,
+      "region_scale": 0.5,
+      "at_ceiling": false,
+      "admissible": true,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    },
+    {
+      "single_retention": 0.5379411764705883,
+      "oracle_retention": 0.8459803921568628,
+      "headroom": 0.30803921568627457,
+      "region_scale": 0.35,
+      "at_ceiling": false,
+      "admissible": true,
+      "seeds": [
+        900,
+        901,
+        902
+      ]
+    }
+  ],
+  "chosen_region_scale": 0.7
+}

@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.DS_Store
+# development-pilot outputs ARE committed: EXP-000 cites them as provenance.
+# Large or confirmatory artefacts must not be added without a note in the PR.
