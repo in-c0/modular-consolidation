@@ -100,6 +100,67 @@ sufficient, and recording that is more useful than quietly replacing it.
 **If no configuration satisfies K1–K5**, that is reported as a negative instrument result.
 The thresholds are not relaxed to manufacture an admissible stream.
 
+### Amendment B — K5 is unsatisfiable; the unbounded-capacity regime cannot answer the question (2026-09-02)
+
+**What happened.** K5 (over-allocation must cost at least 0.05 retention) failed at every
+setting tried, across three independent mechanisms, each swept with `A3` only (fixed bank,
+learned routing -- not a consolidation method):
+
+| mechanism swept | range | best K5 cost |
+| --- | --- | --- |
+| interference (skills sharing input regions) | 0.00 – 1.00 | 0.010 |
+| data scarcity (samples per segment / feature dim) | 10.0 – 1.0 | 0.024 |
+| soft routing (density-gated mixture over all live modules) | interference 0.0 – 1.0 | 0.000 |
+
+The capacity curves are monotone non-decreasing and then flat. Example, hard routing at
+interference 0: K=1 → 0.675, K=2 → 0.738, K=4 → 0.801, K=8 → 0.828, K=16 → 0.839,
+K=24 → 0.839.
+
+**The diagnosis is structural, not a generator bug.** In a parameter-isolated modular
+system with competent routing, a module that is never selected cannot damage a prediction.
+Spare modules therefore cost parameters, compute and storage — but not accuracy. Soft
+routing was tested precisely because it is the mechanism by which spare modules *could*
+dilute a prediction, and it changed nothing: density gating in 48 dimensions is so peaked
+that the mixture is effectively hard. Blurring it further with temperature would only
+reproduce `A2`, a deliberately bad router.
+
+**Consequence — the primary hypothesis was malformed.** If retention is monotone in
+capacity, then consolidation *cannot* improve retention at matched capacity. There is
+nothing for it to fix. The original H1 ("A6 beats C-TERM(A6) on retention at equal
+capacity") is close to analytically false for this architecture class, which is why EXP-000
+found what it found. Consolidation's only possible benefit in the unbounded regime is
+moving left along the efficiency frontier at equal retention — that is a **compression**
+claim, not a **forgetting** claim, and it should be stated as one.
+
+**Reformulation — the binding-ceiling regime.** Consolidation can only be irreducible to
+capacity when capacity cannot simply be increased. Under a hard ceiling smaller than the
+number of distinct skills, a policy that wants a new module must free a slot, and *how* it
+frees that slot is a real decision that capacity accounting cannot make for it:
+
+* **deny** — refuse to spawn, keep using an existing module;
+* **evict** — delete a module and spawn a fresh one;
+* **merge** — pool two modules into one and spawn a fresh one.
+
+All three end each step at exactly the same live-module count, the same parameter count and
+the same storage. Capacity is equal *by construction*, so any difference between them is
+attributable to consolidation and to nothing else. This is also the realistic deployment
+case: fixed memory, unbounded task stream.
+
+**K6 replaces K5** (K1–K4 retained):
+
+| # | Condition | Purpose |
+| --- | --- | --- |
+| K6a | `ceiling < K*` | the ceiling must actually bind |
+| K6b | `retention(A3, unbounded) - retention(A3, ceiling) >= 0.05` | the ceiling must cost something, so the slot decision matters |
+
+K6 is structural and references only `A3` and the stream's own `K*`. It is decidable
+without running any consolidation policy.
+
+**Why this is not criterion-shopping.** As with Amendment A, no consolidation arm has been
+run on CAMS-v1 at the time of this amendment. The evidence that prompted it is about
+whether *any* policy could differ, not about which one wins. K5 is retained in the record
+as an unsatisfiable condition, and the reason it is unsatisfiable is itself the finding.
+
 ## Seed discipline
 
 - Development and calibration seeds: 900–999.

@@ -20,7 +20,8 @@ from .toy import Stream, onehot
 @dataclass
 class ArmConfig:
     name: str
-    routing: str = "learned"          # none | random | learned | oracle
+    routing: str = "learned"          # none | random | learned | soft | oracle
+    soft_temperature: float = 1.0     # only used by routing == "soft"
     cap: int | None = None            # max live modules; None = unbounded
     consolidation: str = "none"       # none | merge | random_merge | full
     merge_operator: str = "operator"  # operator | exact
@@ -78,6 +79,30 @@ class ArmResult:
             "merge_chunks": self.merge_chunks,
             "flags": self.flags,
         }
+
+
+def _soft_predict(live: dict[int, Module], phi: np.ndarray, temperature: float,
+                  ) -> tuple[np.ndarray, np.ndarray]:
+    """Weighted mixture over ALL live modules, gated by log-density.
+
+    Unlike hard routing, soft routing makes spare modules *not free*: a module that should
+    not be involved still contributes to the mixture, so over-allocation dilutes the
+    prediction. This is the regime real MoE and LoRA-bank systems actually operate in, and
+    it is the mechanism by which over-allocation can cost accuracy rather than only
+    parameters.
+    """
+    ids = sorted(live)
+    if not ids:
+        return np.zeros(phi.shape[0], dtype=int), np.full(phi.shape[0], -1)
+    scores = np.stack([live[i].log_density(phi) for i in ids], axis=1) / max(temperature, 1e-6)
+    scores -= scores.max(axis=1, keepdims=True)
+    wts = np.exp(scores)
+    wts /= wts.sum(axis=1, keepdims=True)
+    logits = np.zeros((phi.shape[0], live[ids[0]].n_out))
+    for j, mid in enumerate(ids):
+        logits += wts[:, j:j + 1] * live[mid].predict(phi)
+    chosen = np.array([ids[i] for i in np.argmax(wts, axis=1)])
+    return np.argmax(logits, axis=1), chosen
 
 
 def _predict_with(live: dict[int, Module], phi: np.ndarray, router,
@@ -138,6 +163,11 @@ class ArmRunner:
             ids = sorted(live)
             if len(ids) == 1:
                 return np.full(phi.shape[0], ids[0])
+            if cfg.routing == "soft":
+                if charge:
+                    self.ledger.spend_decision(len(ids), self.stream.cfg.d_feat)
+                scores = np.stack([live[i].log_density(phi) for i in ids], axis=1)
+                return np.array([ids[i] for i in np.argmax(scores, axis=1)])
             if cfg.routing == "random":
                 if charge:
                     self.ledger.spend_decision(len(ids), self.stream.cfg.d_feat)
@@ -228,6 +258,8 @@ class ArmRunner:
                 if mid not in live:
                     continue
                 preds = np.argmax(live[mid].predict(phi), axis=1)
+            elif self.cfg.routing == "soft":
+                preds, _ = _soft_predict(live, phi, self.cfg.soft_temperature)
             else:
                 preds, _ = _predict_with(live, phi, router)
             accs.append(float(np.mean(preds == seg.ye)))
@@ -413,6 +445,14 @@ class ArmRunner:
                         preds = np.argmax(live[mid].predict(phi_e), axis=1)
                     else:
                         preds, _ = _predict_with(live, phi_e, router)
+                elif self.cfg.routing == "soft":
+                    self.ledger.spend_decision(len(self.bank.live), stream.cfg.d_feat)
+                    preds, chosen = _soft_predict(self.bank.live, phi_e,
+                                                  self.cfg.soft_temperature)
+                    if i == t:
+                        self.route_prob_rows.append(
+                            np.bincount(chosen[chosen >= 0],
+                                        minlength=self.bank._next_mid + 1).astype(float))
                 else:
                     preds, chosen = _predict_with(self.bank.live, phi_e, router)
                     if i == t:
@@ -420,8 +460,9 @@ class ArmRunner:
                             np.bincount(chosen[chosen >= 0], minlength=self.bank._next_mid + 1)
                             .astype(float)
                         )
+                active_mult = len(self.bank.live) if self.cfg.routing == "soft" else 1
                 self.ledger.spend_predict(
-                    self.stream.cfg.d_feat * self.stream.cfg.n_class,
+                    self.stream.cfg.d_feat * self.stream.cfg.n_class * active_mult,
                     n=phi_e.shape[0])
                 R[t, i] = float(np.mean(preds == s_i.ye))
 
@@ -433,7 +474,7 @@ class ArmRunner:
         for r_i, row in enumerate(self.route_prob_rows):
             probs[r_i, : row.size] = row
 
-        if self.cfg.routing in ("learned", "random") and self.ledger.decision_flops == 0:
+        if self.cfg.routing in ("learned", "random", "soft") and self.ledger.decision_flops == 0:
             self.flags.append("uncounted_decision")
         if self.cfg.routing == "oracle":
             self.flags.append("oracle_upper_bound")

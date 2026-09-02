@@ -7,6 +7,8 @@ docs/BENCHMARK-POLICY.md (committed before this script was written).
     K3  retention(C-OID) - retention(A1) >= 0.15           (modularity has headroom)
     K4  retention(C-OID) - retention(A2) >= 0.10           (capacity with a bad router
                                                             is NOT enough)
+    K5  max_K retention(A3_K) - retention(A3_Kmax) >= 0.05 (over-allocation must COST
+                                                            something -- Amendment A)
 
 K4 is the condition that makes the regime able to distinguish consolidation from capacity.
 EXP-000's separated-region stream failed it, which is why capacity explained everything
@@ -38,6 +40,8 @@ K1_CEILING = 0.95
 K2_FLOOR = 0.35
 K3_MIN_HEADROOM = 0.15
 K4_MIN_ROUTING_GAP = 0.10
+K5_MIN_OVERALLOC_COST = 0.05
+K5_CAPS = (1, 2, 4, 8, 16, 24)
 
 
 def probe(cfg: StreamConfig, seed: int, bank_k: int) -> dict:
@@ -52,6 +56,15 @@ def probe(cfg: StreamConfig, seed: int, bank_k: int) -> dict:
     for name, arm in runs.items():
         out[name] = metrics.retention_matrix_stats(
             policies.run_arm(stream, arm).R)["retention"]
+    # K5: does over-allocation cost anything? Swept with A3 (fixed bank, learned routing),
+    # which does not spawn, merge, retire, reinstate or compress.
+    curve = {}
+    for K in K5_CAPS:
+        curve[K] = metrics.retention_matrix_stats(policies.run_arm(
+            stream, policies.ArmConfig(f"A3_K{K}", routing="learned", cap=K,
+                                       seed=seed)).R)["retention"]
+    out["curve"] = curve
+    out["overalloc_cost"] = max(curve.values()) - curve[max(K5_CAPS)]
     return out
 
 
@@ -72,8 +85,8 @@ def main() -> int:
 
     rows = []
     print(f"{'interf':>8}{'A1':>8}{'A2':>8}{'OID':>8}{'K3 gap':>9}{'K4 gap':>9}"
-          f"{'K1':>5}{'K2':>5}{'K3':>5}{'K4':>5}{'admit':>8}")
-    print("-" * 77)
+          f"{'K5 cost':>9}{'K1':>5}{'K2':>5}{'K3':>5}{'K4':>5}{'K5':>5}{'admit':>8}")
+    print("-" * 91)
     for f in args.interference:
         cfgs = [StreamConfig(region_scale=args.region_scale, interference=f,
                              n_context=args.n_context,
@@ -87,22 +100,29 @@ def main() -> int:
         k2 = a1 >= K2_FLOOR
         k3 = (oid - a1) >= K3_MIN_HEADROOM
         k4 = (oid - a2) >= K4_MIN_ROUTING_GAP
-        admit = all((k1, k2, k3, k4))
+        cost = float(np.mean([p["overalloc_cost"] for p in per]))
+        k5 = cost >= K5_MIN_OVERALLOC_COST
+        admit = all((k1, k2, k3, k4, k5))
         row = {"interference": f, "A1": a1, "A2": a2, "OID": oid,
-               "k3_gap": oid - a1, "k4_gap": oid - a2,
-               "K1": k1, "K2": k2, "K3": k3, "K4": k4, "admissible": admit,
+               "k3_gap": oid - a1, "k4_gap": oid - a2, "k5_overalloc_cost": cost,
+               "capacity_curve": {str(K): float(np.mean([p["curve"][K] for p in per]))
+                                  for K in K5_CAPS},
+               "K1": k1, "K2": k2, "K3": k3, "K4": k4, "K5": k5, "admissible": admit,
                "seeds": args.seeds}
         rows.append(row)
         tick = lambda b: "ok" if b else "--"  # noqa: E731
         print(f"{f:>8.2f}{a1:>8.3f}{a2:>8.3f}{oid:>8.3f}{oid - a1:>9.3f}{oid - a2:>9.3f}"
-              f"{tick(k1):>5}{tick(k2):>5}{tick(k3):>5}{tick(k4):>5}{str(admit):>8}")
+              f"{cost:>9.3f}{tick(k1):>5}{tick(k2):>5}{tick(k3):>5}{tick(k4):>5}"
+              f"{tick(k5):>5}{str(admit):>8}")
 
     ok = [r for r in rows if r["admissible"]]
     chosen = min(ok, key=lambda r: r["interference"]) if ok else None
     payload = {
         "criterion": {"K1_ceiling": K1_CEILING, "K2_floor": K2_FLOOR,
                       "K3_min_headroom": K3_MIN_HEADROOM,
-                      "K4_min_routing_gap": K4_MIN_ROUTING_GAP},
+                      "K4_min_routing_gap": K4_MIN_ROUTING_GAP,
+                      "K5_min_overalloc_cost": K5_MIN_OVERALLOC_COST,
+                      "K5_caps": list(K5_CAPS)},
         "fixed": {"region_scale": args.region_scale, "n_context": args.n_context,
                   "context_strength": args.context_strength, "bank_k": args.bank_k},
         "rows": rows,
@@ -118,7 +138,7 @@ def main() -> int:
     else:
         print(f"\nchosen interference = {chosen['interference']} "
               f"(least interfering admissible; K3 {chosen['k3_gap']:.3f}, "
-              f"K4 {chosen['k4_gap']:.3f})")
+              f"K4 {chosen['k4_gap']:.3f}, K5 {chosen['k5_overalloc_cost']:.3f})")
     print(f"wrote {out/'calibration.json'}")
     return 0
 
