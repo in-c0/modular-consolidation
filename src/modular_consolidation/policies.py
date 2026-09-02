@@ -33,6 +33,12 @@ class ArmConfig:
     forced_spawn_chunks: list[int] | None = None
     forced_merge_chunks: list[int] | None = None
     extra_passes: int = 1
+    # Structured compression: shrink modules until param_total is at or below this.
+    # Reduces capacity WITHOUT combining knowledge, which is what separates it from
+    # merging as a factor in the lattice.
+    compress_target_params: int | None = None
+    compress_step: int = 4
+    recovery_probe_offsets: tuple[int, ...] = (1, 2, 4, 8, 16)
     seed: int = 0
 
     def as_dict(self) -> dict[str, Any]:
@@ -101,6 +107,7 @@ class ArmRunner:
         self.last_used: dict[int, int] = {}
         self.traffic: dict[int, int] = {}
         self.merges: list[dict] = []
+        self.pending_recovery: list[dict] = []
         self.module_skills: dict[int, dict[int, int]] = {}
         self.spawn_chunks: list[int] = []
         self.merge_chunks: list[int] = []
@@ -264,7 +271,15 @@ class ArmRunner:
         self.last_used[merged.mid] = self.chunk_t
         self.merge_chunks.append(self.chunk_t)
         record["acc_after"] = self._probe_accuracy(self.bank.live, seen)
+        record["recovery_trace"] = []
         self.merges.append(record)
+        # Watch this merge's recovery on a probe set frozen at merge time, so later
+        # segments cannot inflate the apparent recovery.
+        self.pending_recovery.append({
+            "merge_idx": len(self.merges) - 1,
+            "seen_at_merge": seen,
+            "due": [self.chunk_t + k for k in cfg.recovery_probe_offsets],
+        })
 
     def _measure_merge(self, i: int, j: int, seen: int) -> dict:
         """Event-level merge accounting, including the exact-merge counterfactual.
@@ -307,6 +322,40 @@ class ArmRunner:
         if not a or not b:
             return None
         return max(a, key=a.get) == max(b, key=b.get)
+
+    def _maybe_compress(self) -> None:
+        """Shrink live modules until the capacity target is met.
+
+        Shrinks the widest module first, so compression pressure is spread rather than
+        destroying one module entirely.
+        """
+        target = self.cfg.compress_target_params
+        if target is None or not self.bank.live:
+            return
+        guard = 0
+        while self.ledger.param_total > target and guard < 10_000:
+            guard += 1
+            mid = max(self.bank.live, key=lambda m: self.bank.live[m].width)
+            m = self.bank.live[mid]
+            if m.width <= 1:
+                break
+            if self.bank.compress(self.chunk_t, mid,
+                                  max(1, m.width - self.cfg.compress_step)) <= 0:
+                break
+
+    def _drain_recovery_probes(self) -> None:
+        """Evaluate any merge-recovery probes that come due at the current chunk."""
+        if not self.pending_recovery:
+            return
+        still: list[dict] = []
+        for watch in self.pending_recovery:
+            if self.chunk_t in watch["due"]:
+                acc = self._probe_accuracy(self.bank.live, watch["seen_at_merge"])
+                self.merges[watch["merge_idx"]]["recovery_trace"].append(
+                    {"chunk": self.chunk_t, "acc": acc})
+            if self.chunk_t < max(watch["due"]):
+                still.append(watch)
+        self.pending_recovery = still
 
     def _maybe_retire(self) -> None:
         if self.cfg.consolidation != "full":
@@ -351,6 +400,8 @@ class ArmRunner:
                 if self.chunk_t % self.cfg.consolidation_period == 0:
                     self._maybe_consolidate(seen=t)
                     self._maybe_retire()
+                    self._maybe_compress()
+                self._drain_recovery_probes()
 
             for i in range(t + 1):
                 s_i = stream.segments[i]
@@ -456,6 +507,16 @@ def derive_controls(results: dict[str, ArmResult], seed: int = 0) -> list[ArmCon
         out.append(ArmConfig("C-RMERGE(A5)", routing="learned", cap=None,
                              consolidation="random_merge",
                              forced_merge_chunks=list(a5.merge_chunks), seed=seed))
+    if a5 is not None:
+        # Capacity reduction WITHOUT knowledge combination, shrunk to A5's realised size.
+        # If this matches A5, merging is only a compression scheme and the "consolidation"
+        # factor collapses into the capacity factor.
+        out.append(ArmConfig("C-SHRINK(A5)", routing="learned", cap=None,
+                             compress_target_params=a5.ledger["param_total"], seed=seed))
+    if a6 is not None:
+        out.append(ArmConfig("C-SHRINK(A6)", routing="learned", cap=None,
+                             compress_target_params=max(a6.ledger["param_total"], 1),
+                             seed=seed))
     if a6 is not None:
         out.append(ArmConfig("C-TERM(A6)", routing="learned",
                              cap=a6.k_final, seed=seed))

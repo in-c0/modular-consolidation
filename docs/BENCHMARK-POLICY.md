@@ -59,6 +59,47 @@ Arms referenced: `A1` (single adapter), `A2` (fixed bank, random routing), `C-OI
 task-ID upper bound). None of them spawns, merges, retires or reinstates. No candidate
 consolidation policy influences admissibility.
 
+### Amendment A — K4 is insufficient; add K5 (2026-09-02)
+
+**What happened.** The K1–K4 sweep was run and *every* interference setting passed,
+including `interference = 0`. Checking K4 against EXP-000's own separated-region stream
+shows it would have passed there too (oracle 0.867 vs random-routed bank 0.630, gap 0.237,
+comfortably above the 0.10 threshold). A criterion that admits the stream already shown to
+be incapable of answering the question is not doing its job.
+
+**Why it failed.** K4 tests whether **routing** beats capacity. That was never in doubt --
+EXP-000 already showed learned routing beating random routing by 18 points. The thing that
+made capacity explain everything in EXP-000 was different: **retention was monotone
+increasing in the number of modules.** When more modules is always better, no allocation or
+consolidation policy can beat "just use the largest bank", so the benchmark cannot
+distinguish consolidation from capacity however well the arms are controlled.
+
+**The amendment.** A fifth condition is added:
+
+| # | Condition | Purpose |
+| --- | --- | --- |
+| K5 | over a sweep of fixed-bank caps `K` with learned routing, `max_K retention(K) - retention(K_max) >= 0.05` | **over-allocation must actually cost something** |
+
+That is: the retention-versus-capacity curve must have an interior maximum. If it is
+monotone, the correct policy is trivially "allocate the maximum", and there is nothing for
+consolidation to do.
+
+**Why this is not criterion-shopping.** The amendment is made on evidence about the
+*criterion's discriminating power*, not about which consolidation policy wins. At the time
+of this amendment **no consolidation arm (A5, A6, or any C-SHRINK/C-RMERGE control) has
+been run on CAMS-v1 at all**, so K5 cannot have been reverse-engineered toward an outcome.
+The git history is the evidence: this amendment is committed before any CAMS-v1
+consolidation run exists.
+
+K5 references arm `A3` (fixed bank, learned routing) at several caps. `A3` does not spawn,
+merge, retire, reinstate or compress, so it remains a non-candidate arm.
+
+K4 is **retained, not deleted**. It is a necessary condition that happens not to be
+sufficient, and recording that is more useful than quietly replacing it.
+
+**If no configuration satisfies K1–K5**, that is reported as a negative instrument result.
+The thresholds are not relaxed to manufacture an admissible stream.
+
 ## Seed discipline
 
 - Development and calibration seeds: 900–999.

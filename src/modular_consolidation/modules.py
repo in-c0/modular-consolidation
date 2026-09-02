@@ -43,6 +43,11 @@ class Module:
     s1: np.ndarray = field(default=None, repr=False)     # sum of features
     s2: np.ndarray = field(default=None, repr=False)     # sum of squared features
 
+    # structured compression: when set, only these feature rows of w are deployed.
+    # Compression reduces capacity WITHOUT combining knowledge across modules, which is
+    # what makes it separable from merging in the lattice.
+    active_dims: np.ndarray | None = field(default=None, repr=False)
+
     born_at: int = 0
     last_used_at: int = -1
     usage: int = 0
@@ -72,9 +77,14 @@ class Module:
 
     # -- capacity ---------------------------------------------------------
     @property
+    def width(self) -> int:
+        """Number of feature dimensions actually deployed."""
+        return self.dim if self.active_dims is None else int(self.active_dims.size)
+
+    @property
     def deployed_params(self) -> int:
         """Parameters that must exist to make a prediction."""
-        return self.dim * self.n_out
+        return self.width * self.n_out
 
     @property
     def state_bytes(self) -> int:
@@ -104,8 +114,38 @@ class Module:
             self._dirty = False
         return self._w
 
+    @property
+    def w_effective(self) -> np.ndarray:
+        """The deployed weights: zero outside the retained feature rows."""
+        w = self.w
+        if self.active_dims is None:
+            return w
+        out = np.zeros_like(w)
+        out[self.active_dims] = w[self.active_dims]
+        return out
+
     def predict(self, phi: np.ndarray) -> np.ndarray:
-        return phi @ self.w
+        return phi @ self.w_effective
+
+    def compress_to(self, width: int) -> int:
+        """Keep the ``width`` most load-bearing feature rows. Returns parameters freed.
+
+        Compression is a commitment: the retained set is fixed at compression time and is
+        not revisited when the module learns more, so a compressed module cannot quietly
+        reclaim capacity.
+        """
+        width = max(1, min(int(width), self.dim))
+        if width >= self.width:
+            return 0
+        before = self.deployed_params
+        norms = np.linalg.norm(self.w, axis=1)
+        if self.active_dims is not None:
+            mask = np.full(self.dim, -np.inf)
+            mask[self.active_dims] = norms[self.active_dims]
+            norms = mask
+        self.active_dims = np.sort(np.argsort(norms)[-width:])
+        self.provenance.append(f"compress(width={width})")
+        return before - self.deployed_params
 
     def record_self_score(self, score: float) -> None:
         """Welford update of the module's own log-density distribution."""
@@ -145,6 +185,18 @@ class Module:
                 "s1": self.s1.copy(), "s2": self.s2.copy()}
 
 
+def _merged_dims(a: Module, b: Module) -> np.ndarray | None:
+    """A merge of two compressed modules keeps the union of their retained dimensions.
+
+    Taking the union rather than the intersection means merging never *gains* accuracy by
+    silently decompressing, and never loses a dimension either module was relying on. The
+    capacity cost of the union is charged to the ledger by ``ModuleBank.merge``.
+    """
+    if a.active_dims is None or b.active_dims is None:
+        return None
+    return np.union1d(a.active_dims, b.active_dims)
+
+
 def merge_exact(a: Module, b: Module, mid: int, t: int) -> Module:
     """Reference merge: summing sufficient statistics fits the union of both datasets.
 
@@ -160,6 +212,7 @@ def merge_exact(a: Module, b: Module, mid: int, t: int) -> Module:
     m.s2 = a.s2 + b.s2
     m.usage = a.usage + b.usage
     m.merged_from = tuple(sorted(set(a.merged_from + b.merged_from + (a.mid, b.mid))))
+    m.active_dims = _merged_dims(a, b)
     m.provenance = a.provenance + b.provenance + [f"merge_exact({a.mid},{b.mid})@{t}"]
     m._dirty = True
     return m
@@ -183,6 +236,7 @@ def merge_operator(a: Module, b: Module, mid: int, t: int) -> Module:
     m.s2 = a.s2 + b.s2
     m.usage = a.usage + b.usage
     m.merged_from = tuple(sorted(set(a.merged_from + b.merged_from + (a.mid, b.mid))))
+    m.active_dims = _merged_dims(a, b)
     m.provenance = a.provenance + b.provenance + [f"merge_operator({a.mid},{b.mid})@{t}"]
     m._dirty = True
     return m
@@ -243,6 +297,19 @@ class ModuleBank:
         self.events.append({"t": t, "op": "merge", "mid": m.mid, "sources": [i, j],
                             "operator": operator, "reason": reason})
         return m
+
+    def compress(self, t: int, mid: int, width: int, reason: str = "budget") -> int:
+        """Shrink one live module. Reduces capacity without combining knowledge."""
+        m = self.live[mid]
+        freed = m.compress_to(width)
+        if freed <= 0:
+            return 0
+        self.ledger.remove_params(freed)
+        self.ledger.spend_consolidation(self.dim)
+        self._sync_state_bytes()
+        self.events.append({"t": t, "op": "compress", "mid": mid, "width": m.width,
+                            "freed": freed, "reason": reason})
+        return freed
 
     def retire(self, t: int, mid: int, reason: str = "idle") -> None:
         """Remove from routing and from the active-parameter budget.
