@@ -21,7 +21,7 @@ Selection was fixed before any re-analysis. Additions require a dated amendment.
 | M3 | MoCL-P — *Learn it or Leave it* (Repl4NLP 2024, arXiv:2406.18708) | composition + **pruning** | per task | prune | composition weights | yes |
 | M4 | Zero-Leakage Reconstruction Routing (arXiv:2604.14375) | **task-free discovery**, no consolidation | on novelty | none | reconstruction error | no |
 | M5 | MADE-IT — Manifold-Aware Expert Evolution (arXiv:2604.22464) | **merge-based consolidation** | on novelty | merge | training-free, subspace | no |
-| M6 | NORACL (arXiv:2604.27031) | **saturation-triggered growth** | on saturation | none | — | no |
+| M6 | NORACL (arXiv:2604.27031) | **saturation-triggered neuron growth** | on saturation | none | — | no |
 | M7 | Latent-LoRA (arXiv:2607.23837) | one adapter per task, **gradient-free routing** | per task | none | GMM over embeddings | no |
 | M8 | FLAME (arXiv:2605.09355) | **fixed-size pool**, compression instead of expansion | none | low-rank compression | modality routers | no |
 
@@ -36,29 +36,33 @@ are different scientific objectives.
 
 ### Layer A — standardized mechanism panel
 
-**Primary benchmark: Long Sequence / MTL15.** Use the two established fixed task orders,
+**Primary benchmark: Long Sequence / MTL15.** Use the two established task-agnostic Long
+Sequence orders (Orders 3 and 4 as enumerated in `experiments/STANDARDIZED-TRANSPLANTS.md`),
 task-agnostic inference, and task identity only for scoring and `C-OID`. All tasks are
 classification tasks with accuracy as the common metric, making one retention–plasticity
 frontier interpretable. The canonical sequence is not modified.
 
 A method moved onto this substrate is a **standardized implementation of its mechanism**,
-not a reproduction of the source paper's headline result.
+not a reproduction of the source paper's headline result. Admission requires the transplant
+contract in `experiments/STANDARDIZED-TRANSPLANTS.md`; similarity by name is insufficient.
 
-Initial standardized panel:
+Current standardized-panel admission state after source verification:
 
-| # | Standardized mechanism | Included now? | Exact transplant definition still required? |
+| # | Standardized mechanism | Layer-A state | Why |
 | --- | --- | --- | --- |
-| M1 | fixed LoRA bank + learned task-free router | yes | model/rank/router gated on `plasticity-routing` |
-| M2 | grow one LoRA expert at each declared allocation event | yes | replace native task-indexed execution with explicit `C-OID`/task-free variants |
-| M3 | compose LoRA experts and prune under the paper's pruning rule | yes | yes — pruning trigger and composition rule must be frozen |
-| M4 | novelty allocation using reconstruction-style routing | yes | yes — reconstruction representation/router substrate must be frozen |
-| M5 | manifold-aware merge rule | **not yet** | native CLIP-ViT mechanism; LoRA transplant requires independent validation |
-| M6 | saturation-triggered LoRA growth | yes | yes — saturation statistic/threshold must be frozen without outcome tuning |
-| M7 | per-task LoRA bank with GMM/latent routing | yes | model/rank/embedding representation gated on `plasticity-routing` |
-| M8 | fixed-pool low-rank compression | **not yet** | native multimodal MoE mechanism; LoRA transplant requires independent validation |
+| M1 | fixed adapter bank + learned task-free router | **candidate** | constructed reference; shared model/rank/router still gated |
+| M2 | `BEXP-LoRA`: one fresh adapter at each training task boundary | **candidate** | explicit P2 expansion reference, not DEN reproduction |
+| M3 | MoCL-P composition + pruning transplanted to common PEFT | **blocked** | exact pruning-stat aggregation and task-agnostic adaptation unresolved |
+| M4 | reconstruction-based novelty allocation | **blocked** | TB-AE/margin/commitment/soft-routing constants must be frozen from source |
+| M5 | manifold-aware merge rule | **excluded for now** | native CLIP-ViT geometry; LoRA transplant is semantic until validated |
+| M6 | NORACL | **excluded for now** | native operation is layer-local neuron neurogenesis, not LoRA-expert spawn |
+| M7 | Latent-LoRA/GMM routing | **candidate** | native Long Sequence/task-agnostic router is compatible; shared adapter family still gated |
+| M8 | fixed-pool low-rank compression | **excluded for now** | native multimodal MoE substrate; LoRA transplant is semantic until validated |
 
-The standardized panel may therefore begin with M1/M2/M3/M4/M6/M7 once the shared
-model/rank/routing substrate is resolved. M5 and M8 do not enter merely to fill cells.
+The clean starting core is therefore M1 + M2 + M7 after the shared substrate is resolved,
+not six methods forced into one architecture. M3/M4 join only when their listed blockers are
+closed. M5/M6/M8 remain native-fidelity evidence unless independently validated Layer-A
+transplants are added by dated amendment.
 
 A recurrent-return Long Sequence variant is permitted only as a separately named,
 predeclared stress test if returning-task/reinstatement behaviour must be exercised.
@@ -67,20 +71,21 @@ predeclared stress test if returning-task/reinstatement behaviour must be exerci
 
 Each published method is reconstructed on its original substrate/benchmark as closely as
 feasible and then receives the missing attribution controls. Only this layer licenses claims
-about whether a published gain survives the protocol. MADE-IT and FLAME remain here unless
-and until their standardized LoRA transplants are independently validated.
+about whether a published gain survives the protocol. MADE-IT, NORACL and FLAME remain here
+unless and until a standardized transplant is independently validated; native MoCL-P and
+Latent-LoRA also appear here for source-paper attribution.
 
 ## What the lattice adds to each
 
 | # | Reported comparison (as published) | Predicted confound the lattice tests | Missing control(s) |
 | --- | --- | --- | --- |
 | M1 | — | — | reference point |
-| M2 | vs fixed-capacity baselines of different size | growth vs routing/capacity | `C-TERM`: fixed bank at realised final size; task-free vs `C-OID` split |
-| M3 | parameter-efficiency gain | pruning vs never allocating / structured shrink | `C-TERM` + `C-SHRINK` |
-| M4 | vs regularisation/rehearsal baselines; O(N) growth acknowledged | capacity and router quality | `C-TERM`; learned/reconstruction routing vs matched random routing |
+| M2 | vs fixed-capacity baselines of different size | growth vs routing/capacity | `C-TERM`; explicit task-free vs `C-OID` split |
+| M3 | parameter-efficiency gain | pruning vs never allocating / structured shrink | no-prune counterpart, `C-TERM`, `C-SHRINK`, `C-OID` |
+| M4 | vs regularisation/rehearsal baselines; O(N) growth acknowledged | capacity and novelty/router quality | `C-TERM`, matched random routing, `C-RSPAWN` |
 | M5 | ACC/BWT after final merge | merge vs fewer experts; merge vs destructive removal | `C-RMERGE`, `B-EVICT`, `B-DENY` |
-| M6 | near-largest-static performance with fewer parameters | saturation signal vs spawn rate | `C-RSPAWN`: realised spawn count with random timing |
-| M7 | near-zero forgetting with one adapter per task | isolation vs router quality | `C-TERM`; `C-OID` to price GMM routing |
+| M6 | near-largest-static performance with fewer parameters | native saturation signal/growth vs capacity and event timing | native matched-capacity control + `C-RSPAWN`-style timing control where valid |
+| M7 | near-zero forgetting with one adapter per task | isolation/adapter geometry vs router quality | matched random router, `C-OID`, terminal-capacity control |
 | M8 | competitive performance at fixed pool size | compression rule vs capacity | `C-SHRINK` at matched final capacity |
 
 ## Required reporting
@@ -94,8 +99,8 @@ Every run in either layer reports:
 - for merging methods: event-level merge loss, criterion/random-pair comparison, and
   recovery-after-merge with censoring.
 
-The standardized panel additionally reports a shared frontier across methods. The
-native-fidelity layer does **not** pretend scores from incompatible substrates are one
+The standardized panel additionally reports a shared frontier across admitted mechanisms.
+The native-fidelity layer does **not** pretend scores from incompatible substrates are one
 cross-method frontier.
 
 ## Questions the paper asks
@@ -104,8 +109,8 @@ cross-method frontier.
 terminal-capacity-, compute-, storage- and task-identity-matched controls in the native
 setting?
 
-**Q2 — mechanism under one substrate.** When allocation/routing/consolidation mechanisms are
-placed on Long Sequence / MTL15 with one accounting protocol, which factors move the
+**Q2 — mechanism under one substrate.** When scientifically portable mechanisms are placed
+on Long Sequence / MTL15 with one accounting protocol, which factors move the
 retention–plasticity frontier?
 
 **Q3 — which operation.** EXP-002 found a 0.204 simulator retention gap between merging and
@@ -120,16 +125,22 @@ spawn. Do those distinctions survive in gradient-trained modular methods?
   about the source paper; its standardized mechanism implementation may still appear if it
   is independently valid.
 - A standardized transplant is never described as reproducing the original paper.
+- A semantic P3 transplant cannot enter Layer A under the source method's name merely to
+  make the panel look complete.
 - If controls show published gains survive, that is reported as a positive result for the
   field rather than reframed as failure of this project.
 
 ## Remaining blockers
 
-The benchmark is no longer the conceptual blocker. The remaining blockers before Layer A
-runs are:
+The benchmark is no longer the conceptual blocker. Before any Layer-A run:
 
-1. exact standardized transplant definitions for M2/M3/M4/M6 and any later M5/M8 transplant;
-2. model family, LoRA rank and shared routing substrate from `in-c0/plasticity-routing`.
+1. `in-c0/plasticity-routing` must fix the shared model family, adapter/rank and routing
+   substrate;
+2. M3 must resolve the authoritative aggregation used for its pruning statistic and the
+   task-agnostic head/routing adaptation;
+3. M4 must freeze its reconstruction-router and commitment constants from source defaults or
+   a separately predeclared implementation.
 
-Layer B can be prepared in parallel where a source implementation/native benchmark is
-available, but no cross-substrate score may be used as if it were a common frontier.
+M1/M2/M7 can be implemented once blocker 1 lifts. Layer B preparation can continue in
+parallel where a source implementation/native benchmark is available, but no cross-substrate
+score may be used as if it were a common frontier.
