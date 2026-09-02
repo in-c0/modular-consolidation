@@ -76,9 +76,10 @@ learned spawn criterion.
 
 ## M3 — MoCL-P composition + pruning
 
-**Class: P2, provisionally admissible.**
+**Class: P2, provisionally admissible but currently non-executable.**
 
-Source: Wang et al., *Learn it or Leave it* (arXiv:2406.18708).
+Source: Wang et al., *Learn it or Leave it* (arXiv:2406.18708). Detailed source audit:
+`experiments/M3-MOCLP-FIDELITY-NOTE.md`.
 
 The source uses prefix tuning but explicitly states that adapters and LoRA can in principle
 be combined with MoCL-P; that LoRA version was not evaluated in the paper. Therefore this is
@@ -90,32 +91,43 @@ Mechanism to preserve:
 2. freeze older modules;
 3. learn a task feature vector in the same representation dimension used for module
    matching;
-4. compute input-to-task matching weights from similarity between the input representation
+4. compute **per-input** matching weights from similarity between the input representation
    and learned task feature vectors;
 5. train the current module while composing it with weighted prior modules;
 6. after the task, apply the source pruning decision to the newly allocated module.
 
-For MTL15, freeze the published pruning threshold `alpha_ths = 0.25`. The source selected
-benchmark-specific thresholds after a threshold study; **we do not retune that threshold on
-our standardized panel**. Any alternative threshold is a separately labelled sensitivity
-analysis and cannot replace the frozen run.
+For MTL15, preserve the published `alpha_ths = 0.25` in source-fidelity work. The paper chose
+benchmark-specific thresholds after examining the performance/parameter tradeoff, so in
+Layer A `0.25` is described as a **source-derived benchmark operating point**, not a universal
+pruning constant. We do not retune it on our outcomes. Any threshold sensitivity analysis is
+separately labelled and cannot replace the frozen source-derived run.
 
-### M3 blockers before execution
+### M3 blocker: the scalar pruning statistic is not recoverable yet
 
-The paper states the pruning decision in terms of the newly learned module's matching weight
-`alpha_m`, but the exact dataset-level aggregation used to turn per-input matching weights
-into the final pruning statistic must be verified from an authoritative implementation or
-source before code is frozen. Do not invent mean/max aggregation.
+The paper defines `alpha_m(x)` at the input-example level, but the pruning prose later says
+to compare `alpha_m` with a scalar threshold after task training. In the authoritative text
+available to us, the reduction from per-example weights to that scalar is not specified.
+Mean, median, maximum, split-specific or batch-level reductions can change prune/keep events,
+so this is part of the mechanism rather than an implementation detail.
 
-The public Bosch repository currently exposes the preceding MoCL implementation and says the
-MoCL-P code would be released later; it is not sufficient provenance for inventing the
-missing pruning aggregation.
+The paper-linked `boschresearch/MoCL-Pruning` repository is not publicly retrievable as of
+2026-09-02, and no public repository/fork with that name was found. The archived predecessor
+`boschresearch/MoCL-NAACL-2024` says the follow-up MoCL-P code would be released later and
+does not expose the missing pruning rule. A third-party summary describes a task-mean
+aggregation, but that is not authoritative provenance and is **not adopted** here.
 
-The source experiment is task-incremental and assumes task labels at training and testing.
+Do not invent mean/max aggregation and do not select the reduction by downstream score or
+pruning rate. If original code or author clarification becomes available, freeze the
+recovered rule verbatim. If it cannot be recovered, a new explicitly named transplant may
+predeclare its own reduction, but it cannot be called a faithful MoCL-P implementation.
+
+The source experiment also assumes task information in its native task-incremental setting.
 D6 requires task-agnostic inference, so the task/head-selection adaptation must be fixed with
 `plasticity-routing`; the source-like task-ID path is retained only as `C-OID`.
 
-Until both points are resolved, M3 is **specified but not executable**.
+Until both the pruning-statistic provenance and task-agnostic adaptation are resolved, M3 is
+**specified but not executable**. Layer B may not make source-paper attribution claims from a
+paper-derived implementation with an assumed reduction.
 
 Primary controls once executable: no-prune MoCL counterpart, `C-TERM`, `C-SHRINK`, and
 `C-OID`.
@@ -255,7 +267,7 @@ compression rule is defined.
 | --- | --- | --- |
 | M1 | blocked only on shared substrate | constructed reference |
 | M2 `BEXP-LoRA` | blocked only on shared substrate/router | deliberately constructed P2 reference |
-| M3 MoCL-P transplant | **blocked** | pruning-stat aggregation + task-agnostic adaptation unresolved |
+| M3 MoCL-P transplant | **blocked** | pruning-stat aggregation provenance + task-agnostic adaptation unresolved |
 | M4 reconstruction novelty transplant | **blocked** | paper/code threshold + bottleneck + commitment semantics conflict |
 | M5 MADE-IT | **excluded for now** | P3 semantic transplant |
 | M6 NORACL | **excluded for now** | neuron neurogenesis != LoRA expert spawn |
@@ -270,6 +282,8 @@ matrix.
 ## Source anchors
 
 - MoCL-P: https://arxiv.org/abs/2406.18708
+- MoCL-P fidelity note: `experiments/M3-MOCLP-FIDELITY-NOTE.md`
+- paper-linked MoCL-P repository: https://github.com/boschresearch/MoCL-Pruning
 - prior MoCL public code: https://github.com/boschresearch/MoCL-NAACL-2024
 - Zero-Leakage Reconstruction Routing: https://arxiv.org/abs/2604.14375
 - linked public simulations: https://github.com/norikermiche-123/Modular_Continual_Learning
