@@ -96,20 +96,47 @@ plasticity increase and a forgetting increase in opposite directions.
 **Consequence.** “Prune redundant experts” and “merge redundant experts” are not equivalent
 descriptions, and `deny` is a missing baseline in memory-pressure evaluations.
 
-### 5.3 Capacity-pressure phase diagram — **[PREDECLARED, UNRUN]**
+### 5.3 Capacity-pressure phase diagram
 
-Per D5 and `experiments/EXP-003-CEILING-PHASE-PREREG.md`, sweep absolute `K*` and
-`ceiling/K*` separately while holding expected exposures per skill and recurrence statistics
-fixed. Report the complete grid. The preregistration predates the committed runner
-`scripts/run_ceiling_phase.py`.
+Run and reported: `experiments/EXP-003-CEILING-PHASE-RESULT.md`, complete 15-cell grid,
+`K* ∈ {6,12,24}` × `ceiling/K* ∈ {1/6,1/3,1/2,2/3,5/6}`, 8 development seeds, five arms,
+600 rows and 2 619 per-event merge records. Capacity, storage and live-module count are
+identical across arms within every cell by construction. `DEVELOPMENT_SIMULATOR`.
 
-The primary question is not whether one cell favours merge. It is whether B-MERGE creates a
-**reproducible region** that expands the retention–plasticity Pareto frontier relative to
-both deny and evict at the same binding capacity. A one-ratio benefit is exploratory until
-it recurs at a second absolute `K*`.
+**5.3a The boundary variable is absolute skill count, not pressure.** `B-MERGE − B-DENY`
+retention is negative at every non-degenerate ratio at `K*=6`, and positive at every ratio
+from 1/3 upward at both `K*=12` and `K*=24`. The sign changes between 6 and 12 distinct
+skills.
 
-If no such region exists, the simulator evidence remains a methods/evaluation result and no
-architecture narrative is inferred.
+**5.3b Merging needs slack to select well.** Within each `K*`, merge's advantage over deny
+*grows as the ceiling loosens* (at `K*=12`: −0.050, +0.011, +0.030, +0.041, +0.064 across
+1/6 → 5/6), and at the tightest ceilings deny wins. This contradicts the intuition that
+motivated the sweep. The mechanism is visible in the event records: at ceiling 2 there is
+exactly one candidate pair, so merging is forced and blind (precision 0.11–0.13, per-event
+loss ≈0.079); with slack the criterion reaches precision 0.81 and per-event loss 0.0015.
+
+**5.3c The merge criterion is not inert once it has a choice.** §5.2 reported a null between
+criterion-driven and random merging. That null is regime-specific. At `K*≥12` with ratio
+≥1/3 the criterion separates from random pairing on every event-level axis simultaneously:
+ground-truth precision 0.45–0.81 vs 0.07–0.19, per-event total loss 3–8× lower, recovery
+0.63–0.87 vs 0.37–0.53, recovery time roughly halved, censoring 0.12–0.33 vs 0.42–0.53. Both
+loss components fall together, so the earlier "decision quality and outcome are weakly
+coupled" observation must be stated as a property of the small-`K*`, tight-ceiling regime
+rather than as a general result.
+
+**5.3d Frontier status depends on how the predeclared rule is read, and the paper must say
+so.** Against `B-DENY`, `B-MERGE` strictly dominates on both retention and plasticity in 8
+cells — `K*=12` and `K*=24`, ratios 1/3 through 5/6 — contiguous in pressure and replicated
+at two absolute `K*`. Against `B-EVICT-LRU` it is always a trade: much higher retention,
+significantly lower plasticity. Requiring dominance over *both* baselines is unsatisfiable
+by construction, since eviction maximises plasticity by always installing a fresh module.
+Under the standard Pareto reading (dominated by neither baseline, dominating at least one)
+the region qualifies; under the literal conjunctive reading no cell does. The paper reports
+both and does not pick the favourable one silently.
+
+Whatever reading is adopted, this is synthetic evidence on one closed-form learner and one
+stream family, at development seeds only. It does not license an architecture claim, and it
+does not lift EXP-100's dependency on `in-c0/plasticity-routing`.
 
 ## 6. Real-model evidence design — **[REQUIRES UNRUN EXPERIMENTS]**
 
