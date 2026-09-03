@@ -58,9 +58,13 @@ has its own compute/provenance gate.
 | Retention vs capacity is monotone under competent routing | `development-pilot`, replicated across 3 mechanisms |
 | Consolidation in the unbounded regime is a compression claim, not a forgetting claim | `development-pilot` (follows from the above) |
 | Under a binding ceiling, merging beats eviction | `development-pilot`, +0.204 retention, CI excludes zero |
-| Under a binding ceiling, merging beats refusing to spawn | `unresolved`, retention null concealing a significant plasticity/forgetting trade |
-| The merge criterion selects correct pairs | `development-pilot` (opportunistic merges only; degrades to ~chance when merges are forced) |
-| Merge-decision quality and merge cost are weakly coupled | `development-pilot`, replicated in two regimes |
+| Under a binding ceiling, merging beats refusing to spawn | `regime-dependent`: no at `K*=6` (EXP-002/EXP-003); yes at `K*=12` and `K*=24` for ratios 1/3-5/6, dominating deny on both primary axes (EXP-003) |
+| Consolidation adds a nondominated retention-plasticity operating point vs {deny, evict} | `development-pilot`, `SIMULATOR FRONTIER CONDITION: SATISFIED` (D7/D8), contiguous and replicated at two absolute `K*` |
+| Useful consolidation needs capacity pressure **and** candidate diversity | `development-pilot` (EXP-003 mechanism); merge criterion collapses onto random at ceiling 2 |
+| Merge-decision quality and merge cost are weakly coupled | **scoped** to the small-`K*`, tight-ceiling regime; reversed at `K*>=12`, ratio >=1/3 (EXP-003) |
+| Real-model reproduction of the frontier effect | `NOT YET TESTED / BLOCKED` on the `plasticity-routing` substrate export |
+| Architecture-paper gate | `CLOSED` (D9) |
+| The merge criterion selects correct pairs | `development-pilot`; precision 0.45-0.81 given candidate slack, 0.07-0.19 when forced at ceiling 2 (EXP-003) |
 | Any statement about real models from this repository | `no evidence` |
 
 ## No CI

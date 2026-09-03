@@ -1,5 +1,8 @@
 # EXP-003 — capacity-pressure phase diagram (result)
 
+**Verdict (D7/D8): `SIMULATOR FRONTIER CONDITION: SATISFIED`.**
+**Architecture-paper gate: `CLOSED` (D9)** — this clears only the simulator prerequisite.
+
 **`DEVELOPMENT_SIMULATOR`. This is not real-model evidence.** It is a synthetic,
 closed-form ridge learner on CAMS. It does not lift EXP-100's dependency on
 `in-c0/plasticity-routing` and, on its own, establishes no architecture result.
@@ -219,70 +222,126 @@ observation that decision quality and outcome are weakly coupled therefore **doe
 generalise**: it was a property of the small-`K*`, tight-ceiling regime where merging is
 forced and blind.
 
-## 5. Does a reproducible Pareto-extending region exist?
+## 5. Verdict — `SIMULATOR FRONTIER CONDITION: SATISFIED`
 
-The predeclared rule is applied mechanically. Two readings of it diverge, and the divergence
-is reported rather than resolved unilaterally.
+Under owner decision **D7**, "expands the retention–plasticity Pareto frontier vs deny and
+evict at identical binding capacity" carries the **standard nondominated-frontier meaning**
+over the baseline set `{B-DENY, B-EVICT-LRU}`. A MERGE cell qualifies when its
+`(retention, plasticity)` point is dominated by neither primary baseline, is not identical to
+a baseline point, contributes a new nondominated operating point, and the frozen region-level
+recurrence rule is met.
 
-**Reading A — strict, as literally implemented.** Expansion requires a non-negative *mean*
-on both primary axes plus a significant gain on at least one, **against deny and against
-evict separately**.
+**The condition is satisfied.** `B-MERGE` strictly dominates `B-DENY` on both retention and
+plasticity — at least one axis significant, never a significant loss on the other — in eight
+cells:
 
-> Result: **no cell qualifies.** `B-MERGE` never dominates `B-EVICT-LRU`, because eviction's
-> plasticity is significantly higher in 14 of 15 cells.
-> Mechanical verdict: **OPERATING_POINT**.
+- `K*=12` at ceiling ratios **1/3, 1/2, 2/3, 5/6**
+- `K*=24` at ceiling ratios **1/3, 1/2, 2/3, 5/6**
 
-**This clause is unsatisfiable by construction.** `B-EVICT-LRU` installs a fresh module on
-every admission, so it maximises plasticity by definition; no arm can dominate it on that
-axis. A criterion that cannot be met by any possible policy carries no information, and its
-failure here is not evidence about merging.
+`B-MERGE` is dominated by neither baseline anywhere in the grid. Against `B-EVICT-LRU` it is
+a retention–plasticity trade (much higher retention, lower plasticity), so it adds a new
+nondominated operating point rather than replacing the frontier.
 
-**Reading B — standard Pareto extension against the baseline set `{deny, evict}`.** Merge
-extends the frontier if it is dominated by neither baseline and strictly dominates at least
-one.
+The region is contiguous in pressure — three adjacent-ratio runs at each `K*` — and every one
+of the four qualifying ratios recurs at a second absolute `K*`. Both halves of the
+preregistered recurrence requirement are therefore met, and the verdict does not rest on any
+isolated cell.
 
-> Result: **a reproducible region exists.** `B-MERGE` strictly dominates `B-DENY` on both
-> retention and plasticity — with at least one axis significant, and never a significant
-> loss on the other — in 8 cells:
->
-> - `K*=12` at ratios 1/3, 1/2, 2/3, 5/6
-> - `K*=24` at ratios 1/3, 1/2, 2/3, 5/6
->
-> These are contiguous in pressure (three adjacent-ratio runs at each `K*`) and every one of
-> the four ratios is replicated at two absolute `K*` values. Merge is dominated by neither
-> baseline anywhere. The reproducibility requirements in the preregistration — adjacency
-> **and** replication at a second absolute `K*` — are both satisfied.
+The clearest single cell is `K*=12, ratio 5/6`: `B-MERGE` 0.813 retention / 0.838 plasticity
+against `B-DENY` 0.749 / 0.776 — better on both axes at identical capacity, with
+`B-EVICT-LRU` at 0.574 / 0.854.
 
-The clearest single cell is `K*=12, ratio 5/6`: `B-MERGE` 0.813 retention / 0.838
-plasticity against `B-DENY` 0.749 / 0.776 — better on both axes by a wide margin, at
-identical capacity, with `B-EVICT-LRU` at 0.574 / 0.854.
+Computed over the complete grid by `scripts/analyse_ceiling_phase.py`
+(`baseline_frontier_extension`) and stored in `results/ceiling_phase/analysis.json`. No cell
+was selected after the fact, and no scalarisation, hypervolume threshold, convex-hull
+criterion or post-hoc significance gate was introduced.
 
-**This divergence is an owner decision, not mine.** Reading A is what the preregistration
-literally says; Reading B is the standard meaning of "extends the deny/evict Pareto
-frontier" in D5 and is the only one of the two that is satisfiable. Both are reported in
-`results/ceiling_phase/analysis.json` under `pareto_extending` and
-`baseline_frontier_extension`. No cell was selected after the fact; both readings are
-computed over the complete grid.
+### The qualifying region is conditional, not universal
 
-## 6. Architecture-paper consequence, stated mechanically
+The negative and tight-capacity cells are part of the result and are not rewritten:
 
-D4 keeps the architecture paper conditional and re-opens it only on a reproducible region
-that expands the retention–plasticity frontier relative to deny **and** evict at identical
-capacity, with the real-model result still required afterwards.
+- at `K*=6`, MERGE does not establish the qualifying effect at any ratio;
+- at `ceiling = 1` no arm can free a slot, so all five are identical by construction;
+- at `ceiling = 2` there is effectively one candidate pair, so `B-MERGE` and `B-MERGE-RAND`
+  coincide and the merge criterion cannot select at all.
 
-- Under **Reading A**, the condition is not met and the architecture paper **stays closed**.
-  EXP-003 remains a methods-paper operating-point result.
-- Under **Reading B**, the simulator-level condition **is** met: a contiguous, twice-replicated
-  region in which merging dominates the strongest missing baseline on both primary axes at
-  identical capacity.
+EXP-003 therefore supports a **conditional consolidation regime**, not "merging is
+universally better".
 
-Under either reading, **nothing here re-opens EXP-100 by itself.** D4 requires a real-model
-result surviving capacity/storage/decision-compute accounting, and that remains gated on
-`in-c0/plasticity-routing`. EXP-100 was not run and its status is unchanged.
+### Historical note — the ambiguity that prompted D7
 
-Stated without inflation: this is a synthetic result, on one closed-form learner, on one
-stream family, at development seeds only. It is a reason to *ask* the D4 question, not an
-answer to it.
+Before D7, this document reported two competing readings of the predeclared rule. The literal
+conjunction — requiring `B-MERGE` to dominate `B-DENY` **and** `B-EVICT-LRU` simultaneously
+on both objectives — is **rejected** by D7, both because it is not the definition of
+Pareto-frontier expansion and because EXP-003 showed it to be structurally unsatisfiable:
+`B-EVICT-LRU` installs a fresh module on every admission, so it maximises immediate
+plasticity by construction and no policy can dominate it on that axis. That reading is
+recorded here only as the ambiguity that prompted the clarification. It is **not a live
+interpretation** and the standard reading above is the sole scientific disposition of
+EXP-003. The strict computation is retained in `analysis.json` as `pareto_extending` for
+provenance.
+
+## 6. Architecture-paper consequence (D8, D9)
+
+EXP-003 satisfies **only the simulator prerequisite** of D4.
+
+| item | status |
+| --- | --- |
+| simulator frontier evidence | **PASS** |
+| real-model reproduction | **NOT YET TESTED / BLOCKED** |
+| architecture-paper gate | **CLOSED** |
+
+The remaining D4 requirement is unchanged: a real-model pilot must reproduce the
+frontier-extension phenomenon under matched binding/adaptation capacity with explicit
+parameter, storage and decision-compute accounting. That experiment stays blocked on the
+common real-model substrate export from `in-c0/plasticity-routing`, which as of 2026-09-03
+has not been made — that track's own LM experiment (EXP-002) remains blocked and its
+synthetic EXP-001 is pre-confirmatory.
+
+EXP-100 was not run and its status is unchanged. Nothing here reopens the architecture paper.
+
+Stated without inflation: this is a synthetic result, on one closed-form learner, one stream
+family, development seeds only. It clears the simulator gate and nothing more.
+
+## 6a. Mechanism supported by the grid
+
+EXP-003 supports a more specific hypothesis than the intuition that motivated the sweep:
+
+> **Useful consolidation requires both capacity pressure and enough candidate diversity for
+> the merge criterion to exercise meaningful choice.**
+
+At very small active banks merging is effectively forced and semantic selection collapses
+(ceiling 2: precision 0.11–0.13, per-event loss ≈0.079, `B-MERGE` ≡ `B-MERGE-RAND`). Once the
+candidate set is large enough the criterion separates sharply from random merging — precision
+up to 0.81, per-event loss down to 0.0015, recovery 0.63–0.87 versus 0.37–0.53 — and produces
+a retention–plasticity operating point `B-DENY` cannot reach.
+
+This is an experimentally supported **simulator mechanism**, not a claim about neural network
+continual learning. The direction of the pressure effect (merge needs slack, denial is safest
+under maximum pressure) is a finding, not a defect to repair.
+
+## 6b. `K*=6` seed 905 — realised-stream note
+
+`POST-HOC DIAGNOSTIC`: the table below was assembled after the run, from the committed
+payload's `stream_diagnostics`. It recomputes no simulation and changes no registered
+verdict.
+
+`K*=6, seed 905` realised only **2 of 6** nominal skills; its per-skill exposure vector is
+`[9, 9, 0, 0, 0, 0]` against a nominal 3 exposures each, giving exposure standard deviation
+4.24 versus 0.58–1.83 across the other seven `K*=6` seeds. It is a **weak realisation of the
+intended `K*=6` regime**.
+
+| `K*` | streams with all skills realised | weak realisations |
+| --- | --- | --- |
+| 6 | 7 / 8 | seed 905 — 2/6 skills, exposure sd 4.24 |
+| 12 | 8 / 8 | none |
+| 24 | 7 / 8 | seed 900 — 22/24 skills, exposure sd 2.08 (mild) |
+
+Per D8 the seed is **kept exactly as observed**: not resampled, not omitted, and the grid is
+not recomputed without it. This does not invalidate EXP-003, because `K*=6` was preregistered
+as diagnostic rather than as a filter, the qualifying region occurs independently at `K*=12`
+and `K*=24` where 15 of 16 streams realised every skill, and no decision depends on removing
+it. It does mean the `K*=6` row is the weakest in the grid, which is already how §3 reads it.
 
 ## 7. Threats to validity
 

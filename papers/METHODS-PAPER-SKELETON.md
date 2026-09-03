@@ -124,19 +124,33 @@ loss components fall together, so the earlier "decision quality and outcome are 
 coupled" observation must be stated as a property of the small-`K*`, tight-ceiling regime
 rather than as a general result.
 
-**5.3d Frontier status depends on how the predeclared rule is read, and the paper must say
-so.** Against `B-DENY`, `B-MERGE` strictly dominates on both retention and plasticity in 8
-cells — `K*=12` and `K*=24`, ratios 1/3 through 5/6 — contiguous in pressure and replicated
-at two absolute `K*`. Against `B-EVICT-LRU` it is always a trade: much higher retention,
-significantly lower plasticity. Requiring dominance over *both* baselines is unsatisfiable
-by construction, since eviction maximises plasticity by always installing a fresh module.
-Under the standard Pareto reading (dominated by neither baseline, dominating at least one)
-the region qualifies; under the literal conjunctive reading no cell does. The paper reports
-both and does not pick the favourable one silently.
+**5.3d The consolidation operating point is nondominated, in a reproducible region.**
+Against `B-DENY`, `B-MERGE` strictly dominates on both retention and plasticity in 8 cells —
+`K*=12` and `K*=24`, ratios 1/3 through 5/6 — contiguous in pressure and replicated at two
+absolute `K*`. Against `B-EVICT-LRU` it is a retention–plasticity trade: much higher
+retention, lower plasticity. `B-MERGE` is dominated by neither baseline anywhere, so it
+contributes a **new nondominated operating point** to the `{deny, evict}` frontier. Under the
+standard nondominated-frontier definition (owner decision D7) this is frontier expansion, and
+EXP-003 is recorded as `SIMULATOR FRONTIER CONDITION: SATISFIED`.
 
-Whatever reading is adopted, this is synthetic evidence on one closed-form learner and one
-stream family, at development seeds only. It does not license an architecture claim, and it
-does not lift EXP-100's dependency on `in-c0/plasticity-routing`.
+The paper should note why this needs saying at all: requiring a consolidation policy to
+dominate *both* baselines simultaneously is structurally unsatisfiable whenever the eviction
+baseline installs a fresh module on every admission, because that maximises immediate
+plasticity by construction. Papers that report only an aggregate score, or that omit a
+`deny`-style baseline entirely, cannot distinguish "new nondominated operating point" from
+"different point on the same frontier" — which is precisely the attribution failure this
+paper is about.
+
+The region is conditional, not universal: `K*=6` does not establish it, `ceiling = 1` admits
+no slot-freeing operation at all, and `ceiling = 2` collapses `B-MERGE` onto `B-MERGE-RAND`.
+
+**5.3e Scope.** This is synthetic evidence on one closed-form learner and one stream
+family, at development seeds only. It clears the simulator prerequisite of the
+architecture-paper gate and nothing further: the gate stays **closed** pending a real-model
+pilot under matched capacity and explicit parameter/storage/decision-compute accounting, which
+remains blocked on `in-c0/plasticity-routing`. One `K*=6` replicate (seed 905) realised only
+2 of 6 nominal skills and is retained as observed; the qualifying region does not depend on
+it.
 
 ## 6. Real-model evidence design — **[REQUIRES UNRUN EXPERIMENTS]**
 

@@ -131,6 +131,106 @@ Consequence: the benchmark is no longer the conceptual blocker. Remaining blocke
 (1) exact standardized transplant definitions for methods whose native substrate differs,
 and (2) the model/rank/routing substrate dependency on `in-c0/plasticity-routing`.
 
+## 2026-09-03 — third pass, resolving the ambiguity EXP-003 exposed
+
+### D7 — Pareto-frontier semantics
+
+For D4/D5, "consolidation expands the retention–plasticity Pareto frontier vs deny and evict
+at identical binding capacity" uses the **standard nondominated-frontier meaning**. It does
+**not** require `B-MERGE` to strictly dominate both `B-DENY` and `B-EVICT-LRU` simultaneously
+on both objectives.
+
+The literal-conjunction reading is **rejected**: it is not the definition of Pareto-frontier
+expansion, and as EXP-003 exposed it is structurally impossible whenever fresh-module
+eviction maximises immediate plasticity.
+
+For the already-preregistered two-objective comparison the baseline set is `{B-DENY,
+B-EVICT-LRU}`. A MERGE cell is simulator-level frontier expansion when:
+
+1. its `(retention, plasticity)` point is not dominated by either predeclared primary
+   baseline at identical binding capacity;
+2. it is not identical to an existing baseline point;
+3. it contributes a new nondominated operating point relative to the baseline set; and
+4. the region-level reproducibility rule already frozen in EXP-003 is met — it cannot rest
+   on one isolated cell and must recur at a second absolute `K*`.
+
+`B-EVICT-RAND` and `B-MERGE-RAND` remain mechanistic/explanatory controls, not substitutes
+for the primary frontier definition.
+
+**No new scalarisation, hypervolume threshold, convex-hull criterion or post-hoc
+significance gate may be invented now that results are visible.** Such criteria may be
+preregistered for a future confirmatory experiment; they are not retrospective EXP-003 gates.
+
+### D8 — EXP-003 disposition
+
+EXP-003 is recorded as **`SIMULATOR FRONTIER CONDITION: SATISFIED`**.
+
+Qualifying pattern, exactly as already reported: `K*=12` and `K*=24`, ceiling ratios
+`1/3, 1/2, 2/3, 5/6`, where MERGE dominates DENY on both retention and plasticity while
+remaining a retention–plasticity trade against EVICT-LRU, thereby adding a nondominated
+operating point to the baseline frontier. Recurrence at two absolute `K*` satisfies the
+predeclared rule.
+
+The negative and tight-capacity cells are **not** rewritten; they carry the mechanism:
+
+- at `K*=6`, MERGE does not establish the qualifying effect;
+- at extremely tight ceilings the candidate set is too small for the merge criterion to
+  select meaningfully — at ceiling 2 there is effectively one pair;
+- the evidence therefore supports a **conditional consolidation regime**, not "merging is
+  universally better".
+
+EXP-002 is preserved exactly as the earlier regime-specific result. Its "criterion inert"
+reading is **scoped** to that regime (as already corrected in skeleton §5.3c), not portrayed
+as erroneous.
+
+### D9 — Architecture-paper gate remains CLOSED
+
+EXP-003 satisfies only the **simulator prerequisite** of D4. Do not reopen the architecture
+paper, run EXP-100, tune recurrence or stream generation, select only favourable cells,
+import State Promotion's Qwen/LoRA settings, or weaken the real-model requirement.
+
+The remaining D4 requirement is unchanged: **a real-model pilot reproduces the
+frontier-extension phenomenon under matched binding/adaptation capacity with explicit
+parameter/storage/decision-compute accounting.** That experiment stays blocked on the common
+real-model substrate export from `in-c0/plasticity-routing`.
+
+State:
+
+| item | status |
+| --- | --- |
+| simulator frontier evidence | **PASS** |
+| real-model reproduction | **NOT YET TESTED / BLOCKED** |
+| architecture-paper gate | **CLOSED** |
+
+### `K*=6` seed 905
+
+Kept exactly as observed. Not resampled, not omitted, and the grid is not recomputed without
+it. Only 2 of 6 nominal skills were realised, making that replicate a weak realisation of the
+intended regime. This does not invalidate EXP-003: `K*=6` was preregistered as diagnostic
+rather than a filter, the decisive qualifying region occurs independently at `K*=12` and
+`K*=24`, and no decision depends on removing it.
+
+Score-independent realised-stream diagnostics may be reported for transparency. Any analysis
+motivated after seeing EXP-003 is labelled **`POST-HOC DIAGNOSTIC`** and cannot change the
+registered verdict.
+
+### Mechanistic interpretation to preserve
+
+EXP-003 supports a **more specific** hypothesis than the original "consolidation helps under
+pressure" intuition:
+
+> **Useful consolidation requires both capacity pressure and enough candidate diversity for
+> the merge criterion to exercise meaningful choice.**
+
+At very small active banks, merging is effectively forced and semantic selection collapses.
+Once the candidate set is large enough, criterion-based merging separates sharply from random
+merging: higher same-skill precision, substantially lower decision and mechanism loss, better
+recovery, and a reproducible retention–plasticity operating point that DENY cannot achieve.
+
+This is an experimentally supported **simulator mechanism**, not yet a claim about neural
+continual learning. The surprising direction of the pressure effect is a finding, not
+something to repair.
+
 ### Standing instruction
 
 Preserve EXP-000 exactly as a negative development result. Do not tune it away.
