@@ -247,6 +247,34 @@ class ArmRunner:
         return self.bank.live[ids[int(np.argmax(mean_scores))]]
 
     # -- consolidation -----------------------------------------------------
+    @staticmethod
+    def _candidate_diagnostics(n_live: int, scores: list[float] | None,
+                               chosen_score: float | None) -> dict:
+        """C1-C6 from CANDIDATE-DIVERSITY-PREDICTIONS-PREREG.md.
+
+        Reporting only. Every value is read off quantities the selection rule already
+        computed; nothing here influences which pair is merged.
+        """
+        pairs = n_live * (n_live - 1) // 2
+        out = {
+            "n_live": int(n_live),
+            "n_candidate_pairs": int(pairs),
+            "best_score": chosen_score,
+            "second_best_score": None,
+            "score_margin": None,
+            "score_mean": None,
+            "score_std": None,
+        }
+        if scores:
+            arr = np.sort(np.asarray(scores, dtype=float))[::-1]
+            out["score_mean"] = float(arr.mean())
+            out["score_std"] = float(arr.std())
+            if arr.size >= 2:
+                out["second_best_score"] = float(arr[1])
+                if chosen_score is not None:
+                    out["score_margin"] = float(chosen_score - arr[1])
+        return out
+
     def _free_a_slot(self, seen: int) -> bool:
         """Make room for one new module under a binding ceiling.
 
@@ -272,21 +300,26 @@ class ArmRunner:
 
         if cfg.on_full == "merge_random":
             pair = tuple(int(x) for x in self.rng.choice(live, size=2, replace=False))
+            cand = self._candidate_diagnostics(len(live), None, None)
         else:  # merge_best
             best = (-1.0, None)
+            scores: list[float] = []
             for ai in range(len(live)):
                 for bi in range(ai + 1, len(live)):
                     agree = self._functional_agreement(self.bank.live[live[ai]],
                                                        self.bank.live[live[bi]])
+                    scores.append(agree)
                     if agree > best[0]:
                         best = (agree, (live[ai], live[bi]))
             if best[1] is None:
                 return False
             pair = best[1]
+            cand = self._candidate_diagnostics(len(live), scores, best[0])
 
         i, j = int(pair[0]), int(pair[1])
         record = self._measure_merge(i, j, seen)
         record["trigger"] = "ceiling"
+        record.update(cand)
         merged = self.bank.merge(self.chunk_t, i, j, operator=cfg.merge_operator,
                                  reason=f"on_full:{cfg.on_full}")
         combined = dict(self.module_skills.get(i, {}))
@@ -352,21 +385,26 @@ class ArmRunner:
                 return
             ids = self.bank.live_ids
             pair = tuple(self.rng.choice(ids, size=2, replace=False))
+            cand = self._candidate_diagnostics(len(ids), None, None)
         else:
             best = (-1.0, None)
             ids = self.bank.live_ids
+            scores: list[float] = []
             for ai in range(len(ids)):
                 for bi in range(ai + 1, len(ids)):
                     agree = self._functional_agreement(self.bank.live[ids[ai]],
                                                        self.bank.live[ids[bi]])
+                    scores.append(agree)
                     if agree > best[0]:
                         best = (agree, (ids[ai], ids[bi]))
             if best[1] is None or best[0] < cfg.merge_agreement:
                 return
             pair = best[1]
+            cand = self._candidate_diagnostics(len(ids), scores, best[0])
 
         i, j = int(pair[0]), int(pair[1])
         record = self._measure_merge(i, j, seen)
+        record.update(cand)
         merged = self.bank.merge(self.chunk_t, i, j, operator=cfg.merge_operator,
                                  reason=cfg.consolidation)
         combined = dict(self.module_skills.get(i, {}))

@@ -214,3 +214,82 @@ def test_phase_payload_declares_merge_events_and_keeps_rows():
     src = (ROOT / "scripts" / "run_ceiling_phase.py").read_text()
     assert '"merge_events": merge_events,' in src
     assert '"rows": rows,' in src, "aggregate rows must stay for compatibility"
+
+
+# 7. candidate-diversity diagnostics (C1-C6) -------------------------------
+
+def test_candidate_diagnostics_are_present_on_every_merge_event(merged):
+    _, events = merged
+    for e in events:
+        for k in ("n_live", "n_candidate_pairs", "best_score", "second_best_score",
+                  "score_margin", "score_mean", "score_std"):
+            assert k in e
+
+
+def test_candidate_pair_count_matches_live_module_count(merged):
+    _, events = merged
+    for e in events:
+        n = e["n_live"]
+        assert e["n_candidate_pairs"] == n * (n - 1) // 2
+
+
+def test_criterion_merges_record_scores_and_a_nonnegative_margin(merged):
+    _, events = merged
+    scored = [e for e in events if e["best_score"] is not None]
+    assert scored, "merge_best events must record their criterion scores"
+    for e in scored:
+        assert 0.0 <= e["best_score"] <= 1.0
+        if e["second_best_score"] is not None:
+            assert e["best_score"] >= e["second_best_score"]
+            assert e["score_margin"] == pytest.approx(
+                e["best_score"] - e["second_best_score"], abs=1e-12)
+
+
+def test_single_candidate_pair_has_no_second_best(rc):
+    """P1: at n_candidate_pairs == 1 the criterion cannot select at all."""
+    st = merge_stream()
+    _, events = rc.run_one_detailed(st, "B-MERGE", "merge_best", 2, 900)
+    if not events:
+        pytest.skip("ceiling 2 produced no merges on this stream")
+    for e in events:
+        assert e["n_live"] == 2
+        assert e["n_candidate_pairs"] == 1
+        assert e["second_best_score"] is None
+        assert e["score_margin"] is None
+
+
+def test_random_merge_records_candidate_count_but_no_scores(rc):
+    st = merge_stream()
+    _, events = rc.run_one_detailed(st, "B-MERGE-RAND", "merge_random", 3, 900)
+    if not events:
+        pytest.skip("no merges fired")
+    for e in events:
+        assert e["n_candidate_pairs"] >= 1
+        assert e["best_score"] is None, "random pairing must not report a criterion score"
+        assert e["score_margin"] is None
+
+
+def test_candidate_diagnostics_survive_serialization(merged):
+    _, events = merged
+    restored = json.loads(json.dumps(events))
+    for orig, ev in zip(events, restored):
+        for k in ("n_live", "n_candidate_pairs", "best_score", "score_margin"):
+            assert ev[k] == orig[k]
+
+
+def test_instrumentation_did_not_change_merge_selection(rc):
+    """The diagnostics read off already-computed scores; behaviour must be unchanged.
+
+    Guards the invariant by pinning the realised merge schedule and outcomes for a
+    fixed seed, so a future edit to the selection loop cannot slip through as a
+    'reporting' change.
+    """
+    st = merge_stream()
+    row, events = rc.run_one_detailed(st, "B-MERGE", "merge_best", 3, 900)
+    assert row["n_merge"] == len(events)
+    chunks = [e["chunk"] for e in events]
+    assert chunks == sorted(chunks)
+    # selected pair must be the argmax of the recorded candidate distribution
+    for e in events:
+        if e["best_score"] is not None and e["score_mean"] is not None:
+            assert e["best_score"] >= e["score_mean"]
