@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from modular_consolidation import metrics, policies  # noqa: E402
 from modular_consolidation.toy import StreamConfig, make_stream  # noqa: E402
-from run_ceiling import ARMS, K6_MIN_CEILING_COST, run_one  # noqa: E402
+from run_ceiling import ARMS, K6_MIN_CEILING_COST, run_one_detailed  # noqa: E402
 
 
 K_STARS = (6, 12, 24)
@@ -157,6 +157,9 @@ def main() -> int:
 
     rows: list[dict] = []
     cells: list[dict] = []
+    # D5 requires per-event merge loss and recovery across the complete phase diagram, so
+    # individual events are preserved here rather than only their per-row means.
+    merge_events: list[dict] = []
 
     for k_star in K_STARS:
         for num, den in CEILING_RATIOS:
@@ -181,19 +184,22 @@ def main() -> int:
                 )
 
                 for name, on_full in ARMS:
-                    row = run_one(st, name, on_full, ceiling, seed)
-                    row.update(
-                        {
-                            "k_star": k_star,
-                            "ceiling": ceiling,
-                            "ratio_num": num,
-                            "ratio_den": den,
-                            "ceiling_ratio": num / den,
-                            "n_segments": SEGMENTS_PER_SKILL * k_star,
-                        }
-                    )
+                    cell_context = {
+                        "k_star": k_star,
+                        "ceiling": ceiling,
+                        "ratio_num": num,
+                        "ratio_den": den,
+                        "ceiling_ratio": num / den,
+                        "n_segments": SEGMENTS_PER_SKILL * k_star,
+                    }
+                    row, events = run_one_detailed(st, name, on_full, ceiling, seed)
+                    row.update(cell_context)
                     rows.append(row)
                     cell_rows.append(row)
+                    for ev in events:
+                        ev.update(cell_context)
+                        ev["seed"] = seed
+                        merge_events.append(ev)
 
             ub = [unbounded_ret[(k_star, seed)] for seed in DEV_SEEDS]
             ceiling_cost = float(np.mean(ub) - np.mean(capped_ret))
@@ -252,6 +258,7 @@ def main() -> int:
         "stream_diagnostics": stream_diags,
         "cells": cells,
         "rows": rows,
+        "merge_events": merge_events,
     }
     target = out / "rows.json"
     target.write_text(json.dumps(payload, indent=2) + "\n")
@@ -271,7 +278,8 @@ def main() -> int:
             f"{p['mean_diff']:+.4f} [{p['ci_low']:+.4f},{p['ci_high']:+.4f}]   "
             f"{cell['k6']['ceiling_cost']:+.4f}"
         )
-    print(f"\nwrote {target}")
+    print(f"\n{len(rows)} rows, {len(merge_events)} merge events")
+    print(f"wrote {target}")
     return 0
 
 

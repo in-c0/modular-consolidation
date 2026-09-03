@@ -159,6 +159,32 @@ The intended runner writes one machine-readable payload containing:
 A human-readable result document may be written **only after** that payload exists. It must
 report all 15 grid cells.
 
+### Reporting completion — per-event merge records (2026-09-03, pre-run)
+
+**This is a reporting/schema completion, not a scientific amendment.** No grid constant,
+seed, stream, arm behaviour, merge selection rule, recovery measurement or metric definition
+is changed by it, and it was committed before any EXP-003 result existed.
+
+D5 requires per-event merge loss and recovery as explanatory outcomes across the *complete*
+phase diagram. A pre-run audit found the runner's row schema stored only per-row aggregates
+(`mean_merge_loss`, `mean_decision_loss`, `mean_mechanism_loss`, `merge_recovery`,
+`merge_recovery_time`, `merge_recovery_censored`, `merge_precision`), which discards the
+individual events D5 asks for.
+
+The payload therefore gains a top-level `merge_events` array, one record per merge event,
+carrying: `k_star`, `ceiling`, `ratio_num`/`ratio_den`, `ceiling_ratio`, `seed`, `arm`,
+`event_index`, `chunk`, `segment_index`, `trigger`, `pair`, `same_skill`, `acc_before`
+(= `acc_no_merge`), `acc_exact_merge`, `acc_operator_merge`, `acc_after`, `decision_loss`,
+`mechanism_loss`, `total_merge_loss`, the full frozen-probe `recovery_trace`, and the derived
+`recovery`, `recovery_time` and `recovery_censored`.
+
+Existing aggregate row fields are retained unchanged for compatibility, and
+`tests/test_merge_event_reporting.py` asserts that every aggregate remains exactly
+reconstructible from the event records, that the event count equals `len(res.merges)`, that
+`run_one`'s row is identical whether reached through the plain or detailed path, that
+non-merge arms yield zero records without error, and that the frozen grid constants are
+untouched.
+
 ## Non-claims
 
 - This remains a synthetic closed-form development simulator.

@@ -407,6 +407,9 @@ class ArmRunner:
         acc_operator = with_merge(merge_operator)
         return {
             "chunk": self.chunk_t,
+            # Segment index at the moment of the merge. Reporting only: no policy reads it,
+            # and it does not enter any decision.
+            "seen_at_merge": int(seen),
             "pair": [i, j],
             "same_skill": self._same_dominant_skill(i, j),
             "acc_no_merge": acc_no_merge,

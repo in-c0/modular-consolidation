@@ -40,10 +40,68 @@ ARMS = [
 ]
 
 
-def run_one(stream, name, on_full, ceiling, seed):
+def merge_event_records(res, **context) -> list[dict]:
+    """One machine-readable record per merge event.
+
+    Closes the D5 requirement that per-event merge loss and recovery be reportable across
+    the whole phase diagram: the aggregate row fields alone discard individual events.
+
+    This is a reporting projection of ``res.merges``. It selects nothing, re-runs nothing
+    and derives recovery with exactly the same functions the aggregate row uses, so the
+    aggregates remain reconstructible from these records.
+    """
+    out: list[dict] = []
+    for idx, m in enumerate(res.merges):
+        trace = list(m.get("recovery_trace", []))
+        accs = [pt["acc"] for pt in trace]
+        loss = m["total_merge_loss"]
+        if accs:
+            rec = metrics.recovery(loss, m["acc_after"], accs[-1])
+            rt = metrics.recovery_time(loss, m["acc_after"], accs)
+            censored = rt is None
+        else:
+            rec, rt, censored = None, None, None
+        out.append({
+            **context,
+            "arm": res.arm,
+            "event_index": idx,
+            "chunk": m["chunk"],
+            "segment_index": m.get("seen_at_merge"),
+            "trigger": m.get("trigger", "opportunistic"),
+            "pair": list(m["pair"]),
+            "same_skill": m["same_skill"],
+            "acc_before": m["acc_no_merge"],
+            "acc_no_merge": m["acc_no_merge"],
+            "acc_exact_merge": m["acc_exact_merge"],
+            "acc_operator_merge": m["acc_operator_merge"],
+            "acc_after": m["acc_after"],
+            "decision_loss": m["decision_loss"],
+            "mechanism_loss": m["mechanism_loss"],
+            "total_merge_loss": loss,
+            "recovery_trace": trace,
+            "recovery": rec,
+            "recovery_time": rt,
+            "recovery_censored": censored,
+        })
+    return out
+
+
+def run_one_detailed(stream, name, on_full, ceiling, seed):
+    """``run_one`` plus its per-event merge records, from the SAME single simulation run.
+
+    Returns ``(row, merge_events)``. The row is byte-identical to ``run_one``'s.
+    """
     cfg = policies.ArmConfig(name, routing="learned", cap=ceiling, on_full=on_full,
                              seed=seed)
     res = policies.run_arm(stream, cfg)
+    return _score_row(res, name, seed), merge_event_records(res)
+
+
+def run_one(stream, name, on_full, ceiling, seed):
+    return run_one_detailed(stream, name, on_full, ceiling, seed)[0]
+
+
+def _score_row(res, name, seed):
     beh = metrics.retention_matrix_stats(res.R)
     led = res.ledger
     row = {
