@@ -1,0 +1,11 @@
+# EXP-003 execution provenance
+date_utc: 2026-09-03T01:16:02Z
+git_sha: 1d1ea78b61fbcef2b03bfe96a489f153db64a855
+git_status_clean_tracked_source: true (only untracked results/ceiling_phase/ present at launch)
+entrypoint: make ceiling-phase -> python scripts/run_ceiling_phase.py
+python: 3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 17.0.0 (clang-1700.6.4.2)]
+numpy: 2.5.2
+platform: Darwin 24.6.0 arm64
+macos: 15.6
+cpu: Apple M1 Max
+source_tree_sha256: 4b8d3bf013a6be896eca8f47e318d46827891bca2879fe8bdeb90d5d8317e459
