@@ -1,8 +1,10 @@
 # M3 / MoCL-P — source-fidelity note
 
-**Status: PRE-RUN SOURCE AUDIT — M3 remains blocked.**
+**Status: `NATIVE FIDELITY: BLOCKED — AUTHORITATIVE ALGORITHM UNDER-SPECIFIED`.**
 
-Date: 2026-09-02
+Date: 2026-09-02; **final source-recovery attempt 2026-09-03 (below) — unsuccessful.**
+Full frozen configuration and published targets are in
+`experiments/NATIVE-FIDELITY-LEDGER.md`.
 
 This note resolves what can and cannot currently be recovered authoritatively for Wang et
 al., *Learn it or Leave it: Module Composition and Pruning for Continual Learning*
@@ -111,3 +113,61 @@ substrate is exported by `plasticity-routing`.
 - public predecessor implementation: https://github.com/boschresearch/MoCL-NAACL-2024
 
 This note records provenance and ambiguity only; it contains no experimental evidence.
+
+
+---
+
+## Final source-recovery attempt — 2026-09-03
+
+Exhausted, and unsuccessful. What was checked:
+
+| Avenue | Result |
+| --- | --- |
+| `boschresearch/MoCL-Pruning` (paper footnote 1) | **HTTP 404** via the GitHub API, re-confirmed |
+| `boschresearch` org repository search for "MoCL" | only `MoCL-NAACL-2024` (archived predecessor) |
+| Global repository search: "MoCL-Pruning", "MoCL continual" | no results |
+| Global code search for `alpha_ths` | only unrelated projects (LLM training utilities) |
+| Forks / tags / branches of the predecessor | one branch `main`, no tags, no forks with MoCL-P provenance |
+| ACL Anthology page | no code URL, no supplementary material, no appendix attachment |
+| arXiv PDF full text, including appendices | complete hyperparameters recovered; **the reduction is still not stated** |
+
+### What the authoritative text does say
+
+From §6.4, verbatim: "we compare the matching weight of the newly initialized task module
+`α_m` with the pre-specified threshold `α_ths`, if `α_m < α_ths`, then we discard the newly
+learned module." And §4.4 confirms matching is per-instance: "During inference, MOCL-P
+performs per-instance task module matching and composition."
+
+So `α` is per-example while the pruning comparison is scalar, and the paper does not bridge
+them. This is now confirmed against the full text rather than inferred from an abstract.
+
+### New corroborating evidence, deliberately not adopted
+
+The archived predecessor implementation maintains a per-task running mean of batch-mean
+matching weights:
+
+```python
+# boschresearch/MoCL-NAACL-2024, model/mtl_prefix_encoder.py, ~line 315
+if self.attn_weights[task_id] is None:
+    self.attn_weights[task_id] = w_avg
+else:
+    self.attn_weights[task_id] = ((self.attn_weights[task_id] * self.steps_val[task_id])
+                                  + w_avg) / (self.steps_val[task_id] + 1)
+```
+
+This is consistent with the third-party "mean coefficient" description, and the `steps_val`
+naming suggests accumulation over validation steps. **It remains corroboration, not
+authority.** MoCL has no pruning step, so this cannot establish what MoCL-P compares against
+`α_ths`, and the standing rule forbids closing the contract with the most natural
+implementation.
+
+### Everything else is now frozen
+
+The full native configuration — T5-large, prefix-tuning length 10, 40 epochs, batch 8,
+lr 5e-2, max length 512, AdamW, 1000/500 samples per class, three task orders with exact
+sequences, three seeds, `α_ths = 0.25`, and the published MTL15 targets (MoCL-P AVG 82.5,
+15.6M ±1.1 params) — is recorded in `experiments/NATIVE-FIDELITY-LEDGER.md`.
+
+**Consequence:** M3 is one recovered detail away from `READY_FOR_PREREG`. Recovering it
+requires the released code or an author clarification, both of which are outside what this
+work can obtain unilaterally.
