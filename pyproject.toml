@@ -23,3 +23,10 @@ dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+# Only this repository's own tests. `third_party/` holds an unmodified official
+# checkout (see scripts/m6_setup.py) whose tests belong to its authors and must
+# not be collected, run or reported as ours.
+testpaths = ["tests"]
+norecursedirs = ["third_party", ".venv", "results"]

@@ -1,0 +1,186 @@
+{
+  "banner": "MECHANICAL VALIDATION \u2014 NOT SCIENTIFIC EVIDENCE",
+  "pin": {
+    "repo": "https://github.com/karthik-charan/NORACL",
+    "sha": "aa0014c8478b18e70420d3ac451d4e4472ff7040",
+    "branch": "main",
+    "paper": "arXiv:2604.27031v1"
+  },
+  "checks": {
+    "checkout": {
+      "sha": "aa0014c8478b18e70420d3ac451d4e4472ff7040",
+      "clean": true,
+      "matches_pin": true
+    },
+    "identifiers": {
+      "source_triggers": [
+        "ed_fisher",
+        "ed_only",
+        "fisher_only",
+        "loss_plateau",
+        "fixed_pertask"
+      ],
+      "source_inits": [
+        "qr_init",
+        "he_normal",
+        "xavier",
+        "random",
+        "nullspace",
+        "zero",
+        "vp_zfo"
+      ],
+      "match_frozen": true
+    },
+    "config": {
+      "alpha": 0.9,
+      "annealing_epochs": 3,
+      "batch_size": 256,
+      "dataset": "binary_split_mnist",
+      "ewc": true,
+      "f_sat_percentile": 25,
+      "gamma": 0.9,
+      "grow": true,
+      "growth_trigger": "ed_fisher",
+      "hidden_dim": 12,
+      "importance": 5000,
+      "inherit_output_fisher": false,
+      "init": "qr_init",
+      "k_fixed": 2,
+      "lr": 0.005,
+      "lr_1": 0.1,
+      "lr_boost_multiplier": 3.0,
+      "n1_epochs": 10,
+      "n_epochs": 30,
+      "n_in": 784,
+      "n_layers": 2,
+      "n_out": 2,
+      "n_tasks": 5,
+      "orth_thresh": 0.05,
+      "project": "NORACL",
+      "qr_init_scale": 0.2,
+      "seed": 0,
+      "variance_preserve": false
+    },
+    "param_model": {
+      "published_params": 19804,
+      "recomputed": 19804,
+      "agree": true
+    },
+    "derived_controls": {
+      "T_COUNT_k_fixed": 5,
+      "C_MATCH_hidden_dim": 24,
+      "C_MATCH_params": 19440,
+      "C_MATCH_residual": -364
+    },
+    "dataset": {
+      "loaded": true,
+      "batch_x": [
+        256,
+        784
+      ],
+      "batch_y": [
+        256
+      ],
+      "load_seconds": 2.93
+    },
+    "init_paths": {
+      "qr_init": {
+        "ok": true,
+        "shape": [
+          12,
+          2
+        ]
+      },
+      "random": {
+        "ok": true,
+        "shape": [
+          12,
+          2
+        ]
+      },
+      "xavier": {
+        "ok": true,
+        "shape": [
+          12,
+          2
+        ]
+      }
+    },
+    "instrumentation": {
+      "patchable_symbols": [
+        "neurogenesis_step",
+        "trigger_act",
+        "resolve_init_fn"
+      ]
+    },
+    "serialization": {
+      "events": 1,
+      "ed_fired_derived": true,
+      "width_delta": [
+        2,
+        0
+      ],
+      "path": "/private/tmp/claude-501/-Users-avakim-Library-Application-Support-Claude-scratch-workspaces-cac8d930-73c0-4850-aab8-e4661694e78f-0e396411-5c04-4faf-8ba6-31f4f2b04c11-scratch-2026-09-02-ad6d19/b2cde46e-e8f5-49ad-ad3c-8761a9bbd0ec/scratchpad/mc/results/m6_smoke/smoke_events.jsonl"
+    },
+    "determinism": {
+      "same_key_same_draw": true
+    },
+    "trigger_paths": {
+      "ed_fisher": {
+        "ok": true,
+        "grew": false,
+        "widths_before": [
+          12,
+          12
+        ],
+        "widths_after": [
+          12,
+          12
+        ]
+      },
+      "ed_only": {
+        "ok": true,
+        "grew": true,
+        "widths_before": [
+          12,
+          12
+        ],
+        "widths_after": [
+          20,
+          20
+        ]
+      },
+      "fisher_only": {
+        "ok": true,
+        "grew": false,
+        "widths_before": [
+          12,
+          12
+        ],
+        "widths_after": [
+          12,
+          12
+        ]
+      },
+      "fixed_pertask": {
+        "ok": true,
+        "grew": true,
+        "widths_before": [
+          12,
+          12
+        ],
+        "widths_after": [
+          14,
+          14
+        ]
+      }
+    },
+    "function_preservation": {
+      "max_abs_output_change": 0.0,
+      "is_function_preserving": true,
+      "note": "zero fan-out insertion must not change the network function"
+    }
+  },
+  "interpretation_note": "ed_fisher and fisher_only executed but declined to grow under the synthetic all-zero Fisher used here: the p-th percentile of a zero Fisher does not exceed tau, so the Fisher-saturation gate correctly refuses. That is evidence the gate is live, not a failure. ed_only and fixed_pertask grew because neither consults the Fisher gate. No scientific comparison is implied.",
+  "scope": "Score-free mechanical validation only. 0 training steps were run, no accuracy was computed, and no scientific arm was compared."
+}
