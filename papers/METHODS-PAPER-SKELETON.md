@@ -190,6 +190,29 @@ Scores from incompatible native substrates are not plotted as one common frontie
 Methods that fail a predeclared reproduction-fidelity check are labelled **not reproduced**
 and excluded from source-paper attribution claims.
 
+**The two layers are not interchangeable, and the paper must say so explicitly:**
+
+> Standardized transplantation tests **factor attribution under common conditions**, while
+> native-fidelity re-analysis tests whether the **original published gain survives faithful
+> reconstruction plus the missing controls**. Neither layer substitutes for the other. A
+> transplanted mechanism that scores differently on a shared substrate says nothing about
+> whether the source paper's claim holds; a native reproduction says nothing about how that
+> mechanism compares to others under matched conditions.
+
+Native attribution controls are classified before execution as **native-compatible causal
+ablation**, **accounting-only comparison**, or **invalid because it destroys native
+fidelity**. The third category is load-bearing: substituting LoRA adapters for MADE-IT's
+Grassmann-manifold subspace experts, or for NORACL's in-layer neuron insertion, changes the
+object under study and may not be reported as a re-analysis of that paper.
+
+Per-method source chains, frozen native configurations, published targets, control
+classifications, blockers and compute estimates are maintained in
+`experiments/NATIVE-FIDELITY-LEDGER.md`. As of 2026-09-03 the ledger records one method
+`READY_FOR_PREREG` (NORACL), one `PREREGISTERED / UNRUN` (Latent-LoRA), three blocked on
+source, code-vs-paper conflict or data access, and two constructed references that carry no
+published gain to adjudicate. The paper reports that distribution honestly rather than
+presenting a full eight-method panel.
+
 ## 7. Results — **[MUST NOT BE WRITTEN YET]**
 
 No real-model result may be described here before §6 is executed. Simulator results belong

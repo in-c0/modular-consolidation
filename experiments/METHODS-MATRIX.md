@@ -1,5 +1,12 @@
 # Methods-paper experiment matrix
 
+> **Layer B is now maintained in [`NATIVE-FIDELITY-LEDGER.md`](NATIVE-FIDELITY-LEDGER.md)**
+> (2026-09-03). That ledger is authoritative for native source chains, frozen configurations,
+> published targets, control classifications, blockers, compute estimates and per-method
+> status. This matrix remains the selection rationale and the Layer-A view; where the two
+> disagree about a native detail, the ledger wins.
+
+
 Per owner decisions D3 and D6 (`docs/OWNER-DECISIONS.md`), the primary near-term paper is a
 methods/evaluation paper about **attribution** in modular continual learning. It does not
 propose a new policy.
