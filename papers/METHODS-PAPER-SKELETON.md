@@ -180,6 +180,38 @@ LoRA would change the causal mechanism rather than standardize it.
 Model family, adapter family/rank and the shared routing substrate remain gated on
 `in-c0/plasticity-routing`.
 
+### 6.1a M6 — NORACL, the first executable native re-analysis — **[PREREGISTERED, UNRUN]**
+
+Preregistration: `experiments/M6-NORACL-NATIVE-REANALYSIS-PREREG.md`. Official implementation
+at a pinned revision, run unmodified, with reporting-only instrumentation. Two gates in order:
+**Gate R** asks whether the official configuration reproduces its own published result within a
+tolerance frozen in advance; **Gate A**, conditional on R, asks whether the gain comes from
+*when* it grows, *how* new capacity is initialized, or simply from *ending wider*.
+
+**The section must support four outcomes, all of them publishable, and must not be written to
+favour any one of them:**
+
+1. **Reproduces and survives.** The published gain reproduces and persists under
+   trigger-matched, initialization-matched and capacity-matched controls. NORACL's adaptive
+   growth is then attributed as claimed, and this is a positive result for the source paper
+   and for the field's practice.
+2. **Reproduces but collapses to capacity.** A static model at matched final capacity equals
+   it. The defensible residual claim is then about *capacity exposure* — the parameter-time
+   integral — rather than about final accuracy, since growth reaches the same endpoint having
+   held less capacity along the way.
+3. **Reproduces but timing is unnecessary.** A growth-count-matched fixed schedule equals the
+   ED/Fisher trigger. The adaptive trigger is then not required for the measured gain, though
+   the growth mechanism still is.
+4. **Does not reproduce.** Labelled `NATIVE REPRODUCTION FAILED`; attribution does not proceed
+   as though the implementation were validated, and the paper reports the reproduction attempt
+   rather than an attribution result.
+
+**NORACL is not a target to debunk.** It is first in the queue precisely because its source is
+complete enough — official code, 69 configs, shipped per-seed measurements, native ablation
+switches — to attribute honestly. The paper should say that plainly: methods with weaker
+source availability could not be examined this way at all, which is itself a finding about the
+field, not about NORACL.
+
 ### 6.2 Native-fidelity re-analysis
 
 Reproduce each selected published method in its native substrate/benchmark as closely as

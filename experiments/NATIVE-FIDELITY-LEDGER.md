@@ -36,8 +36,8 @@ inspected through the GitHub API on the same date.
 | M3 | MoCL-P | `BLOCKED_SOURCE_AMBIGUITY` |
 | M4 | Zero-Leakage Reconstruction Routing | `BLOCKED_CODE_PAPER_CONFLICT` |
 | M5 | MADE-IT | `BLOCKED_SOURCE_AMBIGUITY` (no code released) |
-| M6 | NORACL | **`READY_FOR_PREREG`** |
-| M7 | Latent-LoRA | `PREREGISTERED / UNRUN` (paper-derived reimplementation; no code released) |
+| M6 | NORACL | **`PREREGISTERED / UNRUN`** — smoke-validated, awaiting compute authorization |
+| M7 | Latent-LoRA | `PREREGISTERED / UNRUN` — both algorithmic ambiguities now `SOURCE-SPECIFIED` (2026-09-03); paper-derived reimplementation, no code released |
 | M8 | FLAME | `NATIVE_ONLY` + `BLOCKED_DATA_ACCESS` |
 
 ---
@@ -215,6 +215,23 @@ disposition.
 | Frozen config (`bsmnist_2l_noracl.yaml`) | `gamma: 0.9`, `f_sat_percentile: 25`, `alpha: 0.9`, `init: qr_init`, `qr_init_scale: 0.2`, `hidden_dim: 12`, `k_fixed: 2`, `lr: 0.005`, `lr_1: 0.1`, `lr_boost_multiplier: 3.0`, `n_epochs: 30`, `n1_epochs: 10`, `annealing_epochs: 3`, `batch_size: 256`, `importance: 5000`, `orth_thresh: 0.05`, `ewc: true`, `n_tasks: 5`, `seed: 0` | official code |
 | Published targets | Permuted MNIST 1L: NORACL **79.9±0.5** at 47.6k±1.6 params vs static-large 76.0±0.8 at 50.8k; 2L: 79.4±0.7 at 49.2k±3.2 vs 73.3±1.8 at 54.9k. Rotated MNIST 1L 72.6±2.4 / 42.2k. Binary Split MNIST 1L 72.1±1.8 / 23.8k | paper Table 1 |
 
+
+> **Correction, 2026-09-03 (verified at runtime).** This entry originally listed control names
+> taken from config **filenames**. The authoritative identifiers in the pinned source are:
+>
+> ```python
+> GROWTH_TRIGGERS = ("ed_fisher", "ed_only", "fisher_only", "loss_plateau", "fixed_pertask")
+> INIT_STRATEGIES = ("qr_init", "he_normal", "xavier", "random", "nullspace", "zero", "vp_zfo")
+> ```
+>
+> So `fsat_only` is a filename fragment — `configs/bsmnist_2l_noracl_fsat_only.yaml` sets
+> `growth_trigger: fisher_only` — and **`random` is an initialization mode, not a trigger**
+> (`bsmnist_2l_noracl_random.yaml` sets `growth_trigger: ed_fisher, init: random`). **There is
+> no random-timing growth trigger in the official code**; the growth-count-matched control is
+> therefore built from `fixed_pertask` with `k_fixed` derived from NORACL's own realised
+> growth. Confirmed against the running source in smoke check [2].
+> See `experiments/M6-NORACL-NATIVE-REANALYSIS-PREREG.md`.
+
 ### Native attribution controls
 
 The official repo already ships most of them as `growth_trigger` and `init` switches, which
@@ -223,10 +240,10 @@ means they can be run **without us modifying the method**:
 | Control | Class | Mechanism |
 | --- | --- | --- |
 | `growth_trigger: ed_only` | native-compatible causal ablation | isolates the ED half of the trigger |
-| `growth_trigger: fsat_only` | native-compatible causal ablation | isolates the Fisher half |
-| `growth_trigger: loss_plateau` | native-compatible causal ablation | the heuristic the paper argues against |
-| `growth_trigger: random` / `fixed_pertask` | native-compatible causal ablation | **growth-count-matched** controls — isolates the trigger from the growth rate |
-| `init: he` / `xavier` / `nullspace` vs `qr_init` | native-compatible causal ablation | isolates function-preserving initialisation from expansion itself |
+| `growth_trigger: fisher_only` | native-compatible causal ablation | isolates the Fisher half |
+| `growth_trigger: loss_plateau` | secondary/exploratory | changes timing *and* information source; not single-factor |
+| `growth_trigger: fixed_pertask` | native-compatible causal ablation | with `k_fixed` derived from realised growth, this is the **growth-count-matched** control |
+| `init: random` / `xavier` / `he_normal` / `nullspace` / `zero` / `vp_zfo` vs `qr_init` | native-compatible causal ablation | isolates fan-in initialisation from expansion itself |
 | `static16/32/64/128/…/1024` configs | native-compatible causal ablation | **capacity-matched static baselines**, including at NORACL's realised final width |
 | Parameter/compute/storage accounting on every arm | accounting-only | paper reports params and accuracy; we add compute and storage |
 | Replacing neuron insertion with **spawning a LoRA expert** | **invalid** — destroys native fidelity | NORACL grows *neurons inside layers*; an adapter bank is a different mechanism and must not be called NORACL |
@@ -312,11 +329,29 @@ first. **M7 is not cleared for compute until A1–A6 are frozen.**
 | Gains attributable to **consolidation vs eviction** | **no** | FLAME never evicts; there is no slot-freeing decision, so the EXP-002/EXP-003 contrast has no analogue |
 | Cross-method frontier comparison against M1/M2/M7 | **no** | different modalities, different metrics, different data; forcing it onto Long Sequence would be a substrate transplant mislabelled as re-analysis |
 
-**Data-access blocker.** MIMIC-IV, MIMIC-CXR and eICU require PhysioNet credentialing and a
-signed data-use agreement; EMBED and ADNI require separate application and approval. These
-are **owner-only actions** — they involve identity verification and legal agreements that I
-cannot and should not complete. Until credentials exist, M8 native reproduction is blocked
-regardless of code availability.
+### Data-access blocker, stated precisely
+
+| Dataset | Used for | Prerequisite | Who can satisfy it |
+| --- | --- | --- | --- |
+| **MIMIC-IV** | 48-IHM, LOS, 25-PHENO | PhysioNet account, identity verification, **CITI "Data or Specimens Only Research"** training certificate, signed **DUA**, credentialing review | **owner only** |
+| **MIMIC-CXR** | chest-X-ray modality for the above | same PhysioNet credentialing plus a separate per-dataset DUA acceptance | **owner only** |
+| **eICU-CRD** | MOR, RAD | same PhysioNet credentialing route, separate DUA | **owner only** |
+| **EMBED** | BIRADS, RISK, DENSITY | Emory institutional application and approval | **owner only** |
+| **ADNI** | five ADNI tasks | ADNI Data Use Agreement, institutional application, review | **owner only** |
+
+Every one requires identity verification, human-subjects training, or a legal agreement signed
+by a named individual. These are not tasks I can or should complete.
+
+**What can and cannot run without them:**
+
+- **Can run:** the official MNIST demo linked from the paper; static inspection of the
+  `continual-learning` branch; the fixed-pool / low-rank-compression *mechanism* audit;
+  parameter and storage accounting derived from published architecture descriptions.
+- **Cannot run:** any reproduction of the published gains, any retention/forgetting number,
+  the compression-off control, and therefore **any Layer-B adjudication of FLAME's published
+  claims**.
+
+Per the current work order, **M8 is not being waited on**. M6 is unblocked and higher priority.
 
 ---
 

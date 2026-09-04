@@ -279,3 +279,25 @@ sequence, not five independent retrainings per control.
 - It does not test merge/deny/evict under a binding capacity ceiling.
 - It does not select the shared Layer-A substrate.
 - It does not permit post-result changes to the fidelity tolerance or source hyperparameters.
+
+
+---
+
+## Amendment 1 — implementation ambiguities resolved (2026-09-03, pre-implementation)
+
+A final primary-source audit resolved **both** previously open questions. Details and verbatim
+quotations are in `experiments/M7-LATENT-LORA-ROUTER-CONTRACT.md`.
+
+| # | Question | Status |
+| --- | --- | --- |
+| A2 | Which pretrained matrix is decomposed for the SVD latent subspace? | **`SOURCE-SPECIFIED`** — each target module's own pretrained weight `W`, rank-`r` truncated SVD computed **once**, factors frozen, adapter `R_t ∈ R^{r×r}`, `ΔW_t = U_r Σ_r R_t V_r^T` (§3.2, Eq. 5) |
+| A5 | Which split fits each task's GMM? | **`SOURCE-SPECIFIED`** — the task's **training** embeddings `{φ(x) : x ∈ D_t}`, fit **after** that task's adapter is trained (§3.3, Eqs. 12–13) |
+
+Remaining items stay `OURS` and must be frozen before compute: A1 checkpoint revision pin,
+A4 warmup / weight decay / gradient clipping, A6 reproduction tolerance. A3 (tokenizer and
+prompt formatting) is inherited from Razdaibiedina et al. 2023 and must be pinned to that
+source rather than re-invented.
+
+No sensitivity check is owed for A2 or A5 — the source specifies both, so there is no
+alternative plausible interpretation to test. **M7 is still not executed and not authorised**;
+it needs an external GPU and remains behind M6 in priority.

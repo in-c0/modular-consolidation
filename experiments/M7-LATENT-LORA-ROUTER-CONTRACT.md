@@ -95,3 +95,58 @@ separately named, predeclared analysis and may not replace an unfavourable prima
 This contract closes the M7 **router** definition. It does not select the common backbone,
 adapter family/rank, optimization budget or target modules; those remain gated on
 `in-c0/plasticity-routing`.
+
+
+---
+
+## Source resolution of the two open implementation questions (2026-09-03)
+
+Both were resolved from the primary source (arXiv:2607.23837) by reading §3.2, §3.3 and
+Appendix C.3 in full. Neither is a reimplementation choice any more; both are
+**`SOURCE-SPECIFIED`**.
+
+### Q1 — which pretrained weight matrix is decomposed? **RESOLVED**
+
+§3.2, verbatim: "We adopt a more compact parameterization based on **LoRA-XS** (Bałazy et
+al., 2025), which constrains weight updates to the principal subspace of the pretrained
+weights. Given a **target weight** `W ∈ R^{m×n}`, we compute its rank-`r` truncated SVD
+`W ≈ U_r Σ_r V_r^T` **once** and keep all three factors **frozen**."
+
+So:
+
+- the decomposed matrix is **the target module's own pretrained weight matrix** — i.e. each
+  targeted query and value projection weight, decomposed separately, not a shared or
+  aggregated matrix;
+- the SVD is computed **once** and the factors are **frozen**; it is **not** recomputed per
+  task;
+- the per-task trainable object is `R_t ∈ R^{r×r}` and the update is
+  **`ΔW_t = U_r Σ_r R_t V_r^T`** (Eq. 5).
+
+Source location: §3.2 "Compact Latent-Space Adapters", Eq. 5.
+
+### Q2 — which samples fit each task's GMM? **RESOLVED**
+
+§3.3, verbatim: "**After training the adapter for task `t`**, we fit a task-specific Gaussian
+mixture model (GMM) over the **training embeddings** `{φ(x) : x ∈ D_t}`."
+
+So:
+
+- the GMM is fit on the **task's training split** `D_t`, not a validation or held-out split;
+- it is fit **after** that task's adapter finishes training, not before;
+- the shared covariance is the regularised pooled within-task scatter
+  `C = (Σ_t S_t) / (Σ_t n_t) + εI` (Eq. 13), where `n_t` is the number of training examples
+  for task `t` — confirming the training split independently.
+
+Source location: §3.3 "Training-Free Task Router", Eqs. 12–13.
+
+The held-out validation split mentioned in Appendix C.3 is used only to select the orthogonal
+regularisation coefficient `λ`, **not** to fit the router. Conflating the two would have been
+the natural error, and it is now excluded by the text.
+
+### Consequence
+
+The M7 native contract has **no remaining algorithmic ambiguity**. What remains is
+environmental and is `OURS`: the `t5-large` checkpoint revision pin, warmup/weight-decay/
+gradient-clipping defaults not stated by the paper, and the reproduction tolerance. The
+sensitivity obligation previously anticipated for Q1/Q2 is **discharged** — no alternative
+interpretation needs testing, because the source specifies both.
