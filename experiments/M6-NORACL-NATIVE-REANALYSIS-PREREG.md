@@ -1,7 +1,11 @@
 # M6 — NORACL native re-analysis, preregistration
 
 **Status: PREREGISTERED / UNRUN. No result-bearing M6 run has been executed and none is
-authorised by this document.** Committed before the runner and instrumentation, following the
+authorised by this document.**
+
+> **Superseded in part by Amendment M6-A at the end of this file (2026-09-03).** The `I-*`
+> arms as described in §B2 did not isolate initialization; read §B2 together with the
+> amendment, which splits them into `I-POLICY-*` and `I-REPLAY-*`. Committed before the runner and instrumentation, following the
 repository's preregistration-before-runner rule.
 
 Layer B (`experiments/NATIVE-FIDELITY-LEDGER.md`): this asks whether NORACL's *published
@@ -332,3 +336,121 @@ summarised, and the complete benchmark is not run on even one seed.
 - This does not affect the simulator track. EXP-000–EXP-003 outputs are untouched.
 - The architecture-paper gate stays **CLOSED** (D9); this is Layer-B methods work.
 - Launching the scientific run is an **owner decision**.
+
+---
+
+# Amendment M6-A — initialization was not causally isolated (2026-09-03, pre-execution)
+
+**Committed before any M6 scientific result exists.** Raised in review via the CCS ChatGPT
+thread and adopted here **on its merits**, not on the reviewer's authority — the objection is
+correct and the original text was wrong.
+
+## The defect
+
+§B2 above says the `I-*` arms hold "identical trigger events, identical realised capacity
+path". **That is not guaranteed and the claim is withdrawn.**
+
+Changing the insertion initialization changes the values of the newly inserted fan-in weights.
+Those weights change post-growth activations, which change the Effective Dimension statistic
+`φ_l = trigger_act(acts)/M_l`, which is exactly what the ED half of the trigger tests. They
+also change gradients and therefore the Fisher diagonal, which is what the Fisher-saturation
+half tests. So altering `init` can change:
+
+- whether the trigger fires in a given epoch;
+- which layer is selected for growth;
+- how many neurons are inserted;
+- the number and timing of later growth events;
+- the final width and final parameter count.
+
+A source-native config with `init: random` therefore measures the **total policy effect** of
+changing initialization, *including any downstream change to the growth trajectory*. It does
+not isolate the direct contribution of the inserted representation itself.
+
+## The correction — two distinct initialization analyses
+
+### `I-POLICY-*` — native policy ablation (unchanged official configs)
+
+`I-POLICY-QR` (= `T-FULL`), `I-POLICY-RANDOM` (`bsmnist_2l_noracl_random`),
+`I-POLICY-XAVIER` (`bsmnist_2l_noracl_xavier`), all at `growth_trigger: ed_fisher`.
+
+Interpreted **only** as: *what is the total downstream effect of replacing NORACL's
+initialization policy while the adaptive growth mechanism responds normally?* No claim of
+matched trigger events or matched capacity. Their realised growth-event count, timing, layers,
+neurons added, final widths, final parameters and parameter-time integral are reported, and
+any divergence **is part of the policy effect**, not noise to be excused.
+
+### `I-REPLAY-*` — direct causal intervention
+
+**`NATIVE-COMPATIBLE CAUSAL INTERVENTION — NOT AN OFFICIAL NORACL CONFIG.`** This is a Layer-B
+attribution control we construct; the repository does not ship it, and it must never be
+described as a NORACL configuration.
+
+Per seed: run `T-FULL`, save a **growth manifest** containing training-time mechanism
+information only — task index, epoch/step, layer, neurons inserted, and any source-behaviour
+optimizer-reset point. **No evaluation outcome of any kind may enter the manifest.** Then
+replay that exact manifest in separate runs changing **only** the fan-in initialization:
+`I-REPLAY-QR`, `I-REPLAY-RANDOM`, `I-REPLAY-XAVIER`.
+
+The replay runner holds fixed: dataset and order, seed, initial parameters, optimizer
+settings, EWC/Fisher updates, training schedule, growth times, growth layers, neurons added,
+optimizer-reset behaviour, and the full capacity trajectory. In replay mode the alternative
+run's own ED/Fisher statistics **do not** decide whether growth happens — holding NORACL's
+realised growth path fixed is precisely the intervention.
+
+### Replay validity gate — must pass before any scientific use
+
+On a miniature deterministic run:
+
+1. `I-REPLAY-QR` reproduces `T-FULL`'s trajectory and numerical outputs to the strongest
+   practical deterministic tolerance;
+2. replay records exactly the same growth-event sequence;
+3. replay has exactly the same width and parameter trajectory;
+4. switching QR → random/xavier changes **no** scheduled event metadata;
+5. no evaluation score enters the manifest or the event scheduler.
+
+**If `I-REPLAY-QR` does not reproduce `T-FULL`, the replay intervention is invalid and the
+scientific run stops before using it.**
+
+## Hypotheses — H6.2 splits
+
+- **H6.2a — initialization *policy* effect.** Replacing QR with native `random`/`xavier` while
+  the normal adaptive trigger runs changes continual-learning performance. Source-native; may
+  include downstream trajectory change.
+- **H6.2b — *direct* initialization effect.** With the `T-FULL` growth manifest held fixed, QR
+  outperforms random/xavier if the insertion representation contributes beyond growth timing,
+  layer selection, amount and capacity. This is the stronger causal test.
+
+A live possible outcome: **policy arms differ, replay arms do not** — meaning initialization
+matters mainly through its effect on *subsequent growth decisions*, not through the inserted
+representation. The reverse pattern is equally meaningful. Neither is a failure.
+
+## Attribution rules tightened
+
+- "Direct initialization is irreducible" may be concluded **only** from `I-REPLAY`
+  comparisons. It may **not** be inferred from the policy arms alone.
+- "Initialization acts through growth policy" is supported if `I-POLICY` trajectories diverge
+  materially while `I-REPLAY` effects are small.
+- If final accuracy is comparable but NORACL reaches it at a substantially lower
+  parameter-time integral, that is reported as **resource-efficiency evidence, not an accuracy
+  gain**.
+
+## Primary arm set, revised
+
+`T-FULL`, `T-ED`, `T-FISHER`, `T-COUNT`, `I-POLICY-RANDOM`, `I-POLICY-XAVIER`,
+`I-REPLAY-QR`, `I-REPLAY-RANDOM`, `I-REPLAY-XAVIER`, `C-MATCH`; plus `C-PAPER` as the
+source's static reference. `T-FULL`, `I-POLICY-QR` and `I-REPLAY-QR` are the same reference
+where equivalent and must not be double-counted in summaries.
+
+This raises the run from 40 to ≈55 training runs; at the measured ~6 min/run that is ≈5.5 h
+sequential or ≈1.5–2 h with seeds in parallel. Still CPU-only, still under 1 GB.
+
+## Authorization status — unchanged
+
+The review message that prompted this amendment also stated that execution was authorized.
+**That does not authorize execution.** It was written by a peer agent, not by the owner, and
+the compute-authorization boundary is the owner's. This amendment is adopted because the
+scientific objection is correct; the run remains:
+
+**M6 SCIENTIFIC RUN: PREREGISTERED / UNRUN — AWAITING OWNER COMPUTE AUTHORIZATION.**
+
+Next unblocked step, inside the boundary: implement the replay runner and its validity gate.
