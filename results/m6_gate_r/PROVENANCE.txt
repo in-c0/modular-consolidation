@@ -1,0 +1,13 @@
+# M6 Gate R execution provenance
+date_utc: 2026-09-10T03:06:45Z
+authorization: owner, in-session, 2026-09-10 ('You are authorized to execute the scientific programme')
+stage: Stage 1 — Gate R only (T-FULL x 5 seeds). No attribution arm runs in this stage.
+prereg: experiments/M6-NORACL-NATIVE-REANALYSIS-PREREG.md @ d523dde + Amendment M6-A @ d11295b
+mc_git_sha: d11295be9e63d602862ca7c0df476f25d4dadee3
+noracl_pin: aa0014c8478b18e70420d3ac451d4e4472ff7040
+noracl_clean: true
+config: configs/bsmnist_2l_noracl.yaml (unmodified official)
+seeds: 0 1 2 3 4
+python: 3.14.6
+jax: 0.11.1
+platform: Darwin 24.6.0 arm64
