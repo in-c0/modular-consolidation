@@ -1,0 +1,11 @@
+{
+  "summary/total_wall_sec": 75.52789902687073,
+  "summary/sgd_sec": 54.06375861167908,
+  "summary/noracl_overhead_sec": 8.843345165252686,
+  "summary/noracl_overhead_pct": 11.708713308848257,
+  "summary/consolidation_sec": 0.5063042640686035,
+  "summary/ed_svd_sec": 1.1256704330444336,
+  "summary/fisher_growth_sec": 6.590515851974487,
+  "summary/neurogenesis_sec": 1.1271588802337646,
+  "summary/total_growth_events": 0
+}
