@@ -36,7 +36,7 @@ inspected through the GitHub API on the same date.
 | M3 | MoCL-P | `BLOCKED_SOURCE_AMBIGUITY` |
 | M4 | Zero-Leakage Reconstruction Routing | `BLOCKED_CODE_PAPER_CONFLICT` |
 | M5 | MADE-IT | `BLOCKED_SOURCE_AMBIGUITY` (no code released) |
-| M6 | NORACL | **`PREREGISTERED / UNRUN`** — smoke-validated, awaiting compute authorization |
+| M6 | NORACL | **`NATIVE REPRODUCTION FAILED — BLOCKED_SOURCE_AMBIGUITY`** (2026-09-10) — Gate R executed and failed all four criteria; the config that produced the published values is not shipped |
 | M7 | Latent-LoRA | `PREREGISTERED / UNRUN` — both algorithmic ambiguities now `SOURCE-SPECIFIED` (2026-09-03); paper-derived reimplementation, no code released |
 | M8 | FLAME | `NATIVE_ONLY` + `BLOCKED_DATA_ACCESS` |
 
